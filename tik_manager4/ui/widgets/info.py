@@ -6,24 +6,87 @@ from tik_manager4.ui.Qt import QtWidgets, QtGui, QtCore
 from tik_manager4.ui.widgets.common import TikButtonBox
 from tik_manager4.ui import pick
 
+class LightboxDialog(QtWidgets.QDialog):
+    """Minimalistic lightbox dialog to show full size image."""
+    def __init__(self, media_path, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.Window)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        
+        # Make it cover the parent window or screen
+        if parent:
+            # Cover the parent widget area
+            top_left = parent.mapToGlobal(QtCore.QPoint(0, 0))
+            self.setGeometry(top_left.x(), top_left.y(), parent.width(), parent.height())
+        else:
+            self.showFullScreen()
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
+        
+        self.label = QtWidgets.QLabel()
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.label)
+        
+        self.media_path = media_path
+        self.set_media()
+
+    def paintEvent(self, event):
+        """Draw the semi-transparent background."""
+        painter = QtGui.QPainter(self)
+        painter.fillRect(self.rect(), QtGui.QColor(0, 0, 0, 200))
+        
+    def set_media(self):
+        if not Path(self.media_path).exists():
+            return
+            
+        screen_size = self.size()
+        # Leave some margin
+        max_w = screen_size.width() * 0.9
+        max_h = screen_size.height() * 0.9
+        
+        if Path(self.media_path).suffix.lower() in [".gif", ".webp"]:
+            movie = QtGui.QMovie(self.media_path)
+            movie.setScaledSize(QtCore.QSize(int(max_w), int(max_h))) # This might distort if not careful, but QMovie scaling is tricky
+            # Better to not scale movie or scale properly? 
+            # QMovie doesn't support aspect ratio scaling easily without subclassing or manual frame handling.
+            # For now let's just show it. If it's too big it might be an issue.
+            # Let's try to just set it.
+            self.label.setMovie(movie)
+            movie.start()
+        else:
+            pixmap = QtGui.QPixmap(self.media_path)
+            scaled = pixmap.scaled(int(max_w), int(max_h), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+            self.label.setPixmap(scaled)
+
+    def mousePressEvent(self, event):
+        self.close()
+        
+    def keyPressEvent(self, event):
+        self.close()
+
 class ImageWidget(QtWidgets.QLabel):
     """Custom class for thumbnail section. Keeps the aspect ratio when resized."""
 
     def __init__(self):
         super().__init__()
-        self.aspect_ratio = 1.78
+        self.aspect_ratio = 1.0
         size_policy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
         )
         size_policy.setHeightForWidth(True)
         self.setSizePolicy(size_policy)
         self.setProperty("image", True)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
 
         self.is_movie = False
         self.q_media = None
+        self.media_path = None
 
     def set_media(self, media_path):
         """Set the media to the widget."""
+        self.media_path = media_path
         if not Path(media_path).exists():
             self.q_media = pick.pixmap("empty_thumbnail.png")
             self.setPixmap(self.q_media)
@@ -38,8 +101,35 @@ class ImageWidget(QtWidgets.QLabel):
             self.is_movie = True
         else:
             self.q_media = QtGui.QPixmap(media_path)
-            self.setPixmap(self.q_media)
+            self.setScaledContents(False)
+            self.setAlignment(QtCore.Qt.AlignCenter)
+            self._update_pixmap()
             self.is_movie = False
+
+    def _update_pixmap(self):
+        """Update the pixmap to fit the height of the widget (fill top/bottom)."""
+        if self.q_media and not self.q_media.isNull():
+            height = self.height()
+            # Scale to height
+            scaled_pixmap = self.q_media.scaledToHeight(height, QtCore.Qt.SmoothTransformation)
+            
+            # If scaled width is larger than widget width, crop center
+            width = self.width()
+            if scaled_pixmap.width() > width:
+                x = (scaled_pixmap.width() - width) // 2
+                cropped = scaled_pixmap.copy(x, 0, width, height)
+                self.setPixmap(cropped)
+            else:
+                self.setPixmap(scaled_pixmap)
+
+    def mousePressEvent(self, event):
+        """Handle mouse press event to open lightbox."""
+        if event.button() == QtCore.Qt.LeftButton and self.media_path and Path(self.media_path).exists():
+            # Find the main window to cover
+            parent = self.window()
+            lightbox = LightboxDialog(self.media_path, parent=parent)
+            lightbox.exec_()
+        super().mousePressEvent(event)
 
     # start playing the movie if the mouse is over the widget
     def enterEvent(self, _):
@@ -53,8 +143,12 @@ class ImageWidget(QtWidgets.QLabel):
 
     def resizeEvent(self, _resize_event):
         height = self.width()
-        self.setMinimumHeight(int(height / self.aspect_ratio))
-        self.setMaximumHeight(int(height / self.aspect_ratio))
+        target_height = int(height / self.aspect_ratio)
+        self.setMinimumHeight(target_height)
+        self.setMaximumHeight(target_height)
+        
+        if not self.is_movie:
+            self._update_pixmap()
 
 class NotesEditor(QtWidgets.QPlainTextEdit):
     """Custom notes editor widget."""
