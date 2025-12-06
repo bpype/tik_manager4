@@ -314,8 +314,11 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         self.info.thumbnail.setToolTip("Right Click for replace options")
         self.info.thumbnail.setMinimumSize(QtCore.QSize(55, 30))
         self.info.thumbnail.setFrameShape(QtWidgets.QFrame.Box)
-        self.info.thumbnail.setScaledContents(True)
         self.info.thumbnail.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Set aspect ratio from settings
+        self.info.thumbnail.set_preview_settings(self.project.preview_settings)
+
         self.addWidget(self.info.thumbnail)
 
         btn_layout = QtWidgets.QHBoxLayout()
@@ -923,15 +926,21 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         self.populate_versions(self.base)
 
     def refresh(self):
-        """Refresh the version dropdown."""
+        """Refresh the version layout."""
+        self.update_preview_settings()
         if self.base:
             self.base.reload()
-            # self.populate_versions(self.base.versions)
             self.populate_versions(self.base)
         else:
             self.version.combo.clear()
             self.info.notes_editor.clear()
             self.info.thumbnail.clear()
+
+    def update_preview_settings(self):
+        """Update the preview settings."""
+        # Trigger resize to apply new aspect ratio
+        # The widget handles reading the settings itself
+        self.info.thumbnail.adjust_height_to_ratio()
 
     def on_replace_thumbnail(self, mode="view"):
         """Replace the thumbnail with the current view or external file."""

@@ -391,9 +391,31 @@ class SettingsDialog(QtWidgets.QDialog):
         # create sub-branches
         preview_settings_item = SwitchTreeItem(["Preview Settings"], permission_level=3)
         project_widget_item.addChild(preview_settings_item)
+
+        # Generate default definition
+        preview_ui_def = convert_to_ui_definition(self.main_object.project.preview_settings.properties)
+
+        # Customize ThumbnailResolution
+        preview_ui_def["ThumbnailResolution"] = {
+            "display_name": "Thumbnail Resolution",
+            "type": DataTypes.VECTOR2INT.value,
+            "value": self.main_object.project.preview_settings.get_property("ThumbnailResolution", [220, 124]),
+            "tooltip": "Resolution for generated thumbnails."
+        }
+
+        # Customize ThumbnailDisplayRatio
+        preview_ui_def["ThumbnailDisplayRatio"] = {
+            "display_name": "Thumbnail Display Ratio",
+            "type": DataTypes.COMBO.value,
+            "items": ["1:1", "16:9"],
+            "value": self.main_object.project.preview_settings.get_property("ThumbnailDisplayRatio", "16:9"),
+            "tooltip": "Aspect ratio for the thumbnail display."
+        }
+
         preview_settings_item.content, _ = self.__create_generic_settings_layout(
             settings_data=self.main_object.project.preview_settings,
             title="Preview Settings",
+            ui_definition=preview_ui_def
         )
         category_definitions = SwitchTreeItem(
             ["Category Definitions"], permission_level=3
@@ -505,6 +527,13 @@ class SettingsDialog(QtWidgets.QDialog):
         for settings_object in self.settings_list:
             settings_object.apply_settings()
             self.check_changes()
+
+        # refresh the ui
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if widget.objectName().startswith("Tik Manager"):
+                if hasattr(widget, "refresh"):
+                    widget.refresh()
+
         if close_dialog:
             self.close()
 
