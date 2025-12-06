@@ -72,6 +72,8 @@ class ImageWidget(QtWidgets.QLabel):
     def __init__(self):
         super().__init__()
         self.aspect_ratio = 1.0
+        self.settings = None
+        self.ratio_key = "ThumbnailDisplayRatio"
         size_policy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
         )
@@ -79,48 +81,89 @@ class ImageWidget(QtWidgets.QLabel):
         self.setSizePolicy(size_policy)
         self.setProperty("image", True)
         self.setCursor(QtCore.Qt.PointingHandCursor)
+        self.setScaledContents(False)
 
         self.is_movie = False
         self.q_media = None
         self.media_path = None
+
+    def set_preview_settings(self, settings):
+        """Set the preview settings object."""
+        self.settings = settings
+        self.update_aspect_ratio()
+
+    def update_aspect_ratio(self):
+        """Update the aspect ratio from settings."""
+        if self.settings:
+            ratio_str = self.settings.get(self.ratio_key, "16:9")
+            self.aspect_ratio = 1.0 if ratio_str == "1:1" else 1.777
 
     def set_media(self, media_path):
         """Set the media to the widget."""
         self.media_path = media_path
         if not Path(media_path).exists():
             self.q_media = pick.pixmap("empty_thumbnail.png")
-            self.setPixmap(self.q_media)
             self.is_movie = False
+            self.update()
             return
         if Path(media_path).suffix.lower() in [".gif", ".webp"]:
             self.q_media = QtGui.QMovie(media_path)
             # don't start but show the first frame
             self.q_media.jumpToFrame(0)
+            self.q_media.frameChanged.connect(self.update)
             self.setAttribute(QtCore.Qt.WA_NoSystemBackground)
-            self.setMovie(self.q_media)
+            # self.setMovie(self.q_media) # We draw manually
             self.is_movie = True
         else:
             self.q_media = QtGui.QPixmap(media_path)
             self.setScaledContents(False)
             self.setAlignment(QtCore.Qt.AlignCenter)
-            self._update_pixmap()
             self.is_movie = False
+        self.update()
 
-    def _update_pixmap(self):
-        """Update the pixmap to fit the height of the widget (fill top/bottom)."""
-        if self.q_media and not self.q_media.isNull():
-            height = self.height()
-            # Scale to height
-            scaled_pixmap = self.q_media.scaledToHeight(height, QtCore.Qt.SmoothTransformation)
+    def paintEvent(self, event):
+        """Paint the image or movie frame with aspect fill."""
+        painter = QtGui.QPainter(self)
+        
+        # Determine what to draw
+        pixmap = None
+        if self.is_movie and self.q_media:
+            pixmap = self.q_media.currentPixmap()
+        elif not self.is_movie and self.q_media:
+            pixmap = self.q_media
             
-            # If scaled width is larger than widget width, crop center
-            width = self.width()
-            if scaled_pixmap.width() > width:
-                x = (scaled_pixmap.width() - width) // 2
-                cropped = scaled_pixmap.copy(x, 0, width, height)
-                self.setPixmap(cropped)
-            else:
-                self.setPixmap(scaled_pixmap)
+        if not pixmap or pixmap.isNull():
+            super().paintEvent(event)
+            return
+
+        # Calculate Aspect Fill
+        widget_rect = self.rect()
+        widget_w = widget_rect.width()
+        widget_h = widget_rect.height()
+        
+        if widget_w == 0 or widget_h == 0:
+            return
+
+        pix_w = pixmap.width()
+        pix_h = pixmap.height()
+        
+        # Scale factor to cover the widget
+        scale_w = widget_w / pix_w
+        scale_h = widget_h / pix_h
+        scale = max(scale_w, scale_h)
+        
+        new_w = int(pix_w * scale)
+        new_h = int(pix_h * scale)
+        
+        # Center the image
+        x = (widget_w - new_w) // 2
+        y = (widget_h - new_h) // 2
+        
+        target_rect = QtCore.QRect(x, y, new_w, new_h)
+        
+        # Draw
+        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+        painter.drawPixmap(target_rect, pixmap)
 
     def mousePressEvent(self, event):
         """Handle mouse press event to open lightbox."""
@@ -142,13 +185,23 @@ class ImageWidget(QtWidgets.QLabel):
             self.q_media.setPaused(True)
 
     def resizeEvent(self, _resize_event):
-        height = self.width()
-        target_height = int(height / self.aspect_ratio)
-        self.setMinimumHeight(target_height)
-        self.setMaximumHeight(target_height)
+        self.adjust_height_to_ratio()
+
+    def adjust_height_to_ratio(self):
+        """Adjust the height of the widget to match the aspect ratio."""
+        if self.settings:
+            self.update_aspect_ratio()
+        width = self.width()
+        if width <= 0:
+            return
+        target_height = int(width / self.aspect_ratio)
         
-        if not self.is_movie:
-            self._update_pixmap()
+        if self.minimumHeight() != target_height or self.maximumHeight() != target_height:
+            self.setMinimumHeight(target_height)
+            self.setMaximumHeight(target_height)
+            self.updateGeometry()
+        
+        self.update()
 
 class NotesEditor(QtWidgets.QPlainTextEdit):
     """Custom notes editor widget."""
