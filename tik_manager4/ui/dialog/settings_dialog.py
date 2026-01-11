@@ -41,8 +41,12 @@ class SettingsDialog(QtWidgets.QDialog):
         """Initiate the class."""
         super().__init__(*args, **kwargs)
 
+        # Ensure dialog is deleted when closed to prevent shutdown crashes
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+
         # DYNAMIC VARIABLES
         self._setting_widgets = []
+        self._content_buttons = []  # Track buttons with signal connections
         self.settings_list = []  # list of settings objects
         self.feedback = Feedback(parent=self)
         self.main_object = main_object
@@ -54,9 +58,10 @@ class SettingsDialog(QtWidgets.QDialog):
             None  # for caching the validations and extracts
         )
         self.error_count: int = 0
+        self._common_folder_widget = None
         # Execution
         self.build_ui()
-        # expand everything
+        # # expand everything
         self.menu_tree_widget.expandAll()
 
     def build_ui(self):
@@ -64,7 +69,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self.build_layouts()
         self.build_static_widgets()
         self.create_content()
-        # set the first item on menu tree as current
+        # # set the first item on menu tree as current
         self.menu_tree_widget.setCurrentItem(self.menu_tree_widget.topLevelItem(0))
         self.resize(960, 630)
         self.layouts.splitter.setSizes([250, 750])
@@ -109,9 +114,13 @@ class SettingsDialog(QtWidgets.QDialog):
         # SIGNALS
         self.apply_button.clicked.connect(self.apply_settings)
         cancel_button.clicked.connect(self.on_close)
-        ok_button.clicked.connect(lambda: self.apply_settings(close_dialog=True))
+        ok_button.clicked.connect(self._on_ok_clicked)
 
         self.layouts.buttons_layout.addWidget(tik_button_box)
+
+    def _on_ok_clicked(self):
+        """Handle OK button click."""
+        self.apply_settings(close_dialog=True)
 
     def on_close(self):
         """Discard all changes and close the dialog."""
@@ -122,10 +131,39 @@ class SettingsDialog(QtWidgets.QDialog):
     # override the closeEvent to discard changes
     def closeEvent(self, event):
         """Override the close event to discard changes."""
+        # Disconnect all signals from setting widgets to prevent crashes during shutdown
+        self._disconnect_signals()
         # if there are changes, ask the user if they want to discard them
         for settings_object in self.settings_list:
             settings_object.reset_settings()
         super().closeEvent(event)
+
+    def _disconnect_signals(self):
+        """Disconnect all signals from setting widgets."""
+        # Disconnect the common folder widget signal
+        if self._common_folder_widget:
+            try:
+                self._common_folder_widget.widget.textChanged.disconnect(
+                    self.main_object.user.add_recent_commons
+                )
+            except (RuntimeError, TypeError):
+                pass
+
+        # Disconnect content button signals
+        for button in self._content_buttons:
+            try:
+                button.clicked.disconnect(self._on_content_button_clicked)
+            except (RuntimeError, TypeError):
+                pass
+
+        # Disconnect modified signals from all setting widgets
+        for widget in self._setting_widgets:
+            try:
+                if hasattr(widget, 'modified'):
+                    widget.modified.disconnect()
+            except (RuntimeError, TypeError):
+                # Signal might already be disconnected or widget deleted
+                pass
 
     def create_content(self):
         """Create the content."""
@@ -228,8 +266,8 @@ class SettingsDialog(QtWidgets.QDialog):
         # get the commonFolder pathbrowser widget
         common_folder_widget = setting_layout.find("commonFolder")
         # if the common folder widget emits a signal, update the recent common folders
-        # common_folder_widget.com.valueChanged.connect(lambda test=folder_path:self.main_object.user.add_recent_commons(test))
-        # common_folder_widget.com.valueChanged.connect(self.main_object.user.add_recent_commons)
+        # Store the widget for cleanup during close
+        self._common_folder_widget = common_folder_widget
         # widget is the QLineEdit. When its changed update the recent common folders
         common_folder_widget.widget.textChanged.connect(self.main_object.user.add_recent_commons)
 
@@ -417,6 +455,7 @@ class SettingsDialog(QtWidgets.QDialog):
             title="Preview Settings",
             ui_definition=preview_ui_def
         )
+
         category_definitions = SwitchTreeItem(
             ["Category Definitions"], permission_level=3
         )
@@ -500,7 +539,7 @@ class SettingsDialog(QtWidgets.QDialog):
         for root_item in root_items:
             # create a content widget
             if not root_item.content:
-                content_widget = QtWidgets.QWidget()
+                content_widget = QtWidgets.QWidget(parent=self)
                 content_widget.setVisible(False)
                 content_layout = QtWidgets.QVBoxLayout(content_widget)
             else:
@@ -511,16 +550,25 @@ class SettingsDialog(QtWidgets.QDialog):
             children = [root_item.child(x) for x in range(root_item.childCount())]
             for child in children:
                 # create a QCommandLinkButton for each child
-                button = QtWidgets.QCommandLinkButton(child.text(0))
-                button.clicked.connect(
-                    lambda _=None, x=child: self.menu_tree_widget.setCurrentItem(x)
-                )
+                button = QtWidgets.QCommandLinkButton(child.text(0), parent=content_widget)
+                # Store child reference in button to avoid lambda capture issues
+                button.setProperty("tree_item", child)
+                button.clicked.connect(self._on_content_button_clicked)
+                self._content_buttons.append(button)
                 content_layout.addWidget(button)
 
             content_layout.addStretch()
             self.layouts.right_layout.addWidget(content_widget)
             # add it to the item
             root_item.content = content_widget
+
+    def _on_content_button_clicked(self):
+        """Handle content button click."""
+        button = self.sender()
+        if button:
+            child = button.property("tree_item")
+            if child:
+                self.menu_tree_widget.setCurrentItem(child)
 
     def apply_settings(self, close_dialog=False):
         """Apply the settings."""
@@ -651,7 +699,8 @@ class SettingsDialog(QtWidgets.QDialog):
             settings_data.properties
         )
         settings_layout = SettingsLayout(ui_definition, settings_data, parent=self)
-        scroll_layout.addLayout(settings_layout)
+        self._setting_widgets.append(settings_layout)
+        scroll_layout.addWidget(settings_layout)
 
         # SIGNALS
         settings_layout.modified.connect(self.check_changes)
@@ -672,6 +721,7 @@ class SettingsDialog(QtWidgets.QDialog):
             title="Category Definitions (Project)",
             parent=self,
         )
+        self._setting_widgets.append(project_category_definitions_widget)
 
         # hide by default
         project_category_definitions_widget.setVisible(False)
@@ -690,6 +740,7 @@ class SettingsDialog(QtWidgets.QDialog):
         metadata_widget = MetadataDefinitions(
             settings_data, title="Metadata Definitions", parent=self
         )
+        self._setting_widgets.append(metadata_widget)
         metadata_widget.setVisible(False)
         self.layouts.right_layout.addWidget(metadata_widget)
 
@@ -706,6 +757,7 @@ class SettingsDialog(QtWidgets.QDialog):
         common_metadata_widget = MetadataDefinitions(
             settings_data, title="Metadata Definitions (Common)", parent=self
         )
+        self._setting_widgets.append(common_metadata_widget)
         common_metadata_widget.setVisible(False)
         self.layouts.right_layout.addWidget(common_metadata_widget)
 
@@ -725,6 +777,7 @@ class SettingsDialog(QtWidgets.QDialog):
             title="Category Definitions (Common)",
             parent=self,
         )
+        self._setting_widgets.append(common_category_definitions_widget)
         common_category_definitions_widget.setVisible(False)
         self.layouts.right_layout.addWidget(common_category_definitions_widget)
 
@@ -741,6 +794,7 @@ class SettingsDialog(QtWidgets.QDialog):
         user_management_widget = UsersDefinitions(
             self.main_object.user, title="Users Management", parent=self
         )
+        self._setting_widgets.append(user_management_widget)
         user_management_widget.setVisible(False)  # hide by default
         self.layouts.right_layout.addWidget(user_management_widget)
 

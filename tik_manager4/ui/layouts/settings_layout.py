@@ -124,8 +124,8 @@ def convert_to_settings_data(ui_definition):
             settings_data[key] = data["value"]
     return settings_data
 
-class SettingsLayout(QtWidgets.QFormLayout):
-    """Visualizes and edits Setting objects in a vertical layout"""
+class SettingsLayout(QtWidgets.QWidget):
+    """Visualizes and edits Setting objects in a widget with form layout"""
     modified = QtCore.Signal(bool)
 
     widget_dict = {
@@ -151,11 +151,18 @@ class SettingsLayout(QtWidgets.QFormLayout):
     }
 
     def __init__(self, ui_definition, settings_data=None, *args, **kwargs):
-        super(SettingsLayout, self).__init__()
+        _parent = kwargs.pop("parent", None)
+        super(SettingsLayout, self).__init__(_parent)
+        self._form_layout = QtWidgets.QFormLayout(self)
+        self._form_layout.setContentsMargins(0, 0, 0, 0)
         self.ui_definition = None
         self.settings_data = None
         self.widgets = None
         self.initialize(ui_definition, settings_data)
+
+    def addRow(self, *args):
+        """Delegate to internal form layout."""
+        self._form_layout.addRow(*args)
 
     def initialize(self, ui_definition, data):
         self.ui_definition = ui_definition
@@ -252,14 +259,6 @@ class SettingsLayout(QtWidgets.QFormLayout):
                 _widget = self.__instanciate_widget(_type, name, properties)
                 if not _widget:
                     continue
-                # _widget_class = self.widget_dict.get(_type)
-                # if not _widget_class:
-                #     continue
-                # # if the key is available in the settings data and if it has a value, use that one
-                # if self.settings_data.get(name) is not None:
-                #     properties["value"] = self.settings_data.get(name)
-                # _widget = _widget_class(name, **properties)
-                # _widget.com.valueChanged.connect(lambda x, n=name: self._setting_data_modified(n, x))
                 self.addRow(_label, _widget)
                 _widgets.append(_widget)
             _widget.label = _label
@@ -270,9 +269,17 @@ class SettingsLayout(QtWidgets.QFormLayout):
         widget_class = self.widget_dict.get(widget_type)
         if not widget_class:
             return None
+        # Create a copy of data and remove keys that are not widget parameters
+        widget_data = data.copy()
+        widget_data.pop("type", None)
+        widget_data.pop("display_name", None)
+        widget_data.pop("tooltip", None)
+        # 'items' is only for Combo widgets, remove for others
+        if widget_type != DataTypes.COMBO.value:
+            widget_data.pop("items", None)
         if self.settings_data.get(key) is not None:
-            data["value"] = self.settings_data.get(key)
-        widget = widget_class(key, **data)
+            widget_data["value"] = self.settings_data.get(key)
+        widget = widget_class(key, **widget_data)
         if widget_type in DataTypes.get_storable_types():
             widget.com.valueChanged.connect(lambda x, k=key: self._setting_data_modified(k, x))
         return widget
@@ -324,7 +331,7 @@ class SettingsLayout(QtWidgets.QFormLayout):
 
     def clear(self, keep_settings=False):
         """Clear the layout"""
-        self._clear_layout(self)
+        self._clear_layout(self._form_layout)
         if not keep_settings:
             self.settings_data.reset_settings()
 
@@ -347,9 +354,9 @@ def main():
     test_settings = Settings(test_file)
     _style_file = pick.style_file()
     dialog = QtWidgets.QDialog(styleSheet=str(_style_file.readAll(), "utf-8"))
-    setting_lay = SettingsLayout(test_settings.get_data())
-
-    dialog.setLayout(setting_lay)
+    main_layout = QtWidgets.QVBoxLayout(dialog)
+    setting_lay = SettingsLayout(test_settings.get_data(), parent=dialog)
+    main_layout.addWidget(setting_lay)
 
     dialog.show()
     sys.exit(app.exec_())

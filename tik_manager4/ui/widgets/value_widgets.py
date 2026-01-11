@@ -11,7 +11,7 @@ class Boolean(QtWidgets.QCheckBox):
             self, name, object_name=None, value=False, disables=None, **kwargs
     ):
         super().__init__()
-        self.com = signals.ValueChangeBool()
+        self.com = signals.ValueChangeBool(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.setChecked(value)
@@ -25,10 +25,10 @@ class Boolean(QtWidgets.QCheckBox):
 
 class String(QtWidgets.QLineEdit):
     def __init__(
-        self, name, object_name=None, value="", placeholder="", disables=None, **kwargs
+        self, name, object_name=None, value="", placeholder="", disables=None, parent=None
     ):
-        super().__init__()
-        self.com = signals.ValueChangeStr()
+        super().__init__(parent=parent)
+        self.com = signals.ValueChangeStr(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.setText(value)
@@ -43,10 +43,10 @@ class String(QtWidgets.QLineEdit):
 
 class Combo(QtWidgets.QComboBox):
     def __init__(
-        self, name, object_name=None, value=None, items=None, disables=None, **kwargs
+        self, name, object_name=None, value=None, items=None, disables=None, parent=None, **kwargs
     ):
-        super().__init__()
-        self.com = signals.ValueChangeStr()
+        super().__init__(parent=parent)
+        self.com = signals.ValueChangeStr(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.addItems(items or [])
@@ -77,7 +77,7 @@ class SpinnerInt(QtWidgets.QSpinBox):
         **kwargs
     ):
         super().__init__()
-        self.com = signals.ValueChangeInt()
+        self.com = signals.ValueChangeInt(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.setMinimum(minimum)
@@ -117,7 +117,7 @@ class SpinnerFloat(QtWidgets.QDoubleSpinBox):
     ):
         super().__init__()
         self.setDecimals(decimals)
-        self.com = signals.ValueChangeFloat()
+        self.com = signals.ValueChangeFloat(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.setMinimum(minimum)
@@ -157,7 +157,7 @@ class _Vector(QtWidgets.QWidget):
         **kwargs
     ):
         super().__init__()
-        self.com = signals.ValueChangeList()
+        self.com = signals.ValueChangeList(parent=self)
         self.value = value
         self.setObjectName(object_name or name)
         self.disables = disables or []
@@ -178,7 +178,7 @@ class Vector2Float(_Vector):
         self.y.valueChanged.connect(self.value_change_event)
         self.layout.addStretch()
 
-    def value_change_event(self, e):
+    def value_change_event(self, e=None):
         self.value = [self.x.value, self.y.value]
         self.com.valueChangeEvent(self.value)
 
@@ -197,7 +197,7 @@ class Vector3Float(_Vector):
         self.z.valueChanged.connect(self.value_change_event)
         self.layout.addStretch()
 
-    def value_change_event(self, e):
+    def value_change_event(self, e=None):
         self.value = [self.x.value, self.y.value, self.z.value]
         self.com.valueChangeEvent(self.value)
 
@@ -213,7 +213,7 @@ class Vector2Int(_Vector):
         self.y.valueChanged.connect(self.value_change_event)
         self.layout.addStretch()
 
-    def value_change_event(self, e):
+    def value_change_event(self, e=None):
         self.value = [self.x.value, self.y.value]
         self.com.valueChangeEvent(self.value)
 
@@ -232,7 +232,7 @@ class Vector3Int(_Vector):
         self.z.valueChanged.connect(self.value_change_event)
         self.layout.addStretch()
 
-    def value_change_event(self, e):
+    def value_change_event(self, e=None):
         self.value = [self.x.value, self.y.value, self.z.value]
         self.com.valueChangeEvent(self.value)
 
@@ -250,7 +250,7 @@ class List(QtWidgets.QWidget):
         **kwargs
     ):
         super().__init__()
-        self.com = signals.ValueChangeList()
+        self.com = signals.ValueChangeList(parent=self)
         self.value = value or []
         self.setObjectName(object_name or name)
         self.disables = disables or []
@@ -387,7 +387,8 @@ class Button(TikButton):
             **kwargs
     ):
         super().__init__(display_name or name)
-        self.com = signals.ValueChangeObj()
+        _ = value
+        self.com = signals.ValueChangeObj(parent=self)
         self.setObjectName(object_name or name)
         self.disables = disables or []
         self.clicked.connect(self.value_change_event)

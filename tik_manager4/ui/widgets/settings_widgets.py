@@ -1,5 +1,6 @@
 """Convenince widgets for settings UI."""
 
+
 from tik_manager4.core.constants import DataTypes, ValidationState
 from tik_manager4.ui.Qt import QtWidgets, QtCore, QtGui
 from tik_manager4.ui.widgets import value_widgets
@@ -174,7 +175,7 @@ class UsersDefinitions(QtWidgets.QWidget):
         self.switch_tree_widget.addTopLevelItem(widget_item)
 
         # create the content widget
-        content_widget = QtWidgets.QWidget()
+        content_widget = QtWidgets.QWidget(parent=self)
         content_layout = QtWidgets.QVBoxLayout()
         content_widget.setLayout(content_layout)
 
@@ -182,10 +183,10 @@ class UsersDefinitions(QtWidgets.QWidget):
         content_layout.addLayout(form_layout)
         # type label. We don't want to make it editable.
         # Easier to delete the metadata and add a new one.
-        type_name = ResolvedText(data["initials"])
+        type_name = ResolvedText(data["initials"], parent=content_widget)
         form_layout.addRow("Initials: ", type_name)
 
-        user_email = ValidatedString(name="user_email", value=data.get("email", ""), allow_special_characters=True)
+        user_email = ValidatedString(name="user_email", value=data.get("email", ""), allow_special_characters=True, parent=content_widget)
 
         form_layout.addRow("Email: ", user_email)
 
@@ -194,7 +195,7 @@ class UsersDefinitions(QtWidgets.QWidget):
         permission_as_string = permission_levels[data["permissionLevel"]]
 
         permission_widget = self.value_widgets["combo"](
-            name="permissionLevel", value=permission_as_string, items=permission_levels
+            name="permissionLevel", value=permission_as_string, items=permission_levels, parent=content_widget
         )
         # if this is default Admin user, make it uneditable
         if name == "Admin":
@@ -202,21 +203,21 @@ class UsersDefinitions(QtWidgets.QWidget):
 
         form_layout.addRow("Permission Level: ", permission_widget)
 
-        reset_password_button = TikButton(text="Reset Password", parent=self)
+        reset_password_button = TikButton(text="Reset Password", parent=content_widget)
         form_layout.addRow(reset_password_button)
 
         reset_password_button.clicked.connect(self.on_reset_password)
 
-        permission_widget.currentIndexChanged.connect(
-            lambda value: data.update({"permissionLevel": value})
-        )
-        permission_widget.com.valueChanged.connect(
-            lambda value: self.modified.emit(True)
-        )
+        # SIGNALS - Use native Qt signals instead of com object to avoid shutdown crashes
+        def on_permission_changed(value):
+            data.update({"permissionLevel": value})
+            self.modified.emit(True)
+        permission_widget.currentIndexChanged.connect(on_permission_changed)
 
-        # user_email.com.valueChanged.connect(lambda value: self.modified.emit(True))
-        user_email.textChanged.connect(lambda value: data.update({"email": value}))
-        user_email.com.valueChanged.connect(lambda value: self.modified.emit(True))
+        def on_email_changed(value):
+            data.update({"email": value})
+            self.modified.emit(True)
+        user_email.textChanged.connect(on_email_changed)
 
         content_widget.setVisible(False)
         self.layouts.right_layout.addWidget(content_widget)
@@ -406,7 +407,7 @@ class MetadataDefinitions(QtWidgets.QWidget):
         self.switch_tree_widget.addTopLevelItem(widget_item)
 
         # create the content widget
-        content_widget = QtWidgets.QWidget()
+        content_widget = QtWidgets.QWidget(parent=self)
         content_layout = QtWidgets.QVBoxLayout()
         content_widget.setLayout(content_layout)
 
@@ -418,36 +419,36 @@ class MetadataDefinitions(QtWidgets.QWidget):
         content_layout.addLayout(form_layout)
         # type label. We don't want to make it editable.
         # Easier to delete the metadata and add a new one.
-        type_label = QtWidgets.QLabel("Type: ")
-        type_name = ResolvedText(data_type)
+        type_label = QtWidgets.QLabel("Type: ", parent=content_widget)
+        type_name = ResolvedText(data_type, parent=content_widget)
         form_layout.addRow(type_label, type_name)
 
         # default value
-        default_value_label = QtWidgets.QLabel("Default Value: ")
+        default_value_label = QtWidgets.QLabel("Default Value: ", parent=content_widget)
         default_value_widget = self.value_widgets[data_type](
-            name="default_value", value=data["default"]
+            name="default_value", value=data["default"], parent=content_widget
         )
         form_layout.addRow(default_value_label, default_value_widget)
-        default_value_widget.com.valueChanged.connect(
-            lambda value: data.update({"default": value})
-        )
-        default_value_widget.com.valueChanged.connect(
-            lambda value: self.modified.emit(True)
-        )
+
+        # SIGNALS - Use the com object's valueChanged but connect to a local function
+        # to avoid shutdown crashes. The function captures 'data' dict by reference.
+        def on_default_value_changed(value):
+            data.update({"default": value})
+            self.modified.emit(True)
+        default_value_widget.com.valueChanged.connect(on_default_value_changed)
 
         # create an additional list widget for combo items
         if data_type == DataTypes.COMBO.value:
-            combo_items_label = QtWidgets.QLabel("Combo Items: ")
-            combo_items_widget = value_widgets.List(name="enum", value=data["enum"])
+            combo_items_label = QtWidgets.QLabel("Combo Items: ", parent=content_widget)
+            combo_items_widget = value_widgets.List(name="enum", value=data["enum"], parent=content_widget)
             default_value_widget.addItems(data["enum"])
             default_value_widget.setCurrentText(data["default"])
             form_layout.addRow(combo_items_label, combo_items_widget)
-            combo_items_widget.com.valueChanged.connect(
-                lambda value: data.update({"enum": value})
-            )
-            combo_items_widget.com.valueChanged.connect(
-                lambda value: self.modified.emit(True)
-            )
+
+            def on_combo_items_changed(value):
+                data.update({"enum": value})
+                self.modified.emit(True)
+            combo_items_widget.com.valueChanged.connect(on_combo_items_changed)
 
         content_widget.setVisible(False)
         self.layouts.right_layout.addWidget(content_widget)
@@ -475,12 +476,22 @@ class CategoryDefinitions(QtWidgets.QWidget):
         self.layouts = MainLayout()
 
         self.switch_tree_widget = None
+        self._reorder_lists = []  # Track lists with rowsMoved connections for cleanup
 
         self.build_layouts()
         self.build_static_widgets()
         self.build_value_widgets()
+        #
+        # self.layouts.splitter.setSizes([500, 500])
 
-        self.layouts.splitter.setSizes([500, 500])
+    def closeEvent(self, event):
+        """Clean up signal connections on close."""
+        for lst in self._reorder_lists:
+            try:
+                lst.model.rowsMoved.disconnect()
+            except (RuntimeError, TypeError):
+                pass
+        super().closeEvent(event)
 
     def build_layouts(self):
         """Build the layouts."""
@@ -631,7 +642,7 @@ class CategoryDefinitions(QtWidgets.QWidget):
         widget_item = SwitchTreeItem([name])
         self.switch_tree_widget.addTopLevelItem(widget_item)
 
-        content_widget = QtWidgets.QWidget()
+        content_widget = QtWidgets.QWidget(parent=self)
         content_layout = QtWidgets.QVBoxLayout()
         content_widget.setLayout(content_layout)
 
@@ -647,7 +658,7 @@ class CategoryDefinitions(QtWidgets.QWidget):
         # link the content widget to the item for visibility switching
         content_widget.setVisible(False)
         self.layouts.right_layout.addWidget(content_widget)
-        widget_item.content = content_widget
+        # widget_item.content = content_widget
 
     def _remove_item(self, validations_model, validations_list, list_data):
         """Removes the selected item from the list view."""
@@ -708,7 +719,6 @@ class CategoryDefinitions(QtWidgets.QWidget):
 
     def build_value_widgets(self):
         """Build the widgets."""
-        # _valid_types = list(self.value_widgets.keys())
         for metadata_key, data in self.settings_data.properties.items():
             self._add_value_widget(metadata_key, data)
 
@@ -726,8 +736,8 @@ class CategoryDefinitions(QtWidgets.QWidget):
 
     def __add_type(self, form_layout, data):
         """Convenience method for adding a type widget."""
-        type_label = QtWidgets.QLabel("Type: ")
-        type_combo = value_widgets.Combo(name="type", value=data["type"])
+        type_label = QtWidgets.QLabel("Type: ", parent=self)
+        type_combo = value_widgets.Combo(name="type", value=data["type"], parent=self)
         type_combo.setToolTip(
             "Type of the category. "
             "This value defines if the category belongs to an asset or shot mode. "
@@ -738,15 +748,18 @@ class CategoryDefinitions(QtWidgets.QWidget):
 
         form_layout.addRow(type_label, type_combo)
 
-        # SIGNALS
-        type_combo.com.valueChanged.connect(lambda value: data.update({"type": value}))
-        type_combo.com.valueChanged.connect(lambda value: self.modified.emit(True))
+        # SIGNALS - Use native Qt signal instead of com object to avoid shutdown crashes
+        def on_type_changed(value):
+            data.update({"type": value})
+            self.modified.emit(True)
+        type_combo.currentTextChanged.connect(on_type_changed)
 
     def __add_validations(self, form_layout, data):
         """Convenience method for adding validations view."""
         validations_layout = QtWidgets.QHBoxLayout()
-        validations_label = QtWidgets.QLabel("Validations: ")
-        validations_list = ReorderListView(list_data=data["validations"], dcc_availability=self.availability_dict["dcc_validations"])
+        validations_label = QtWidgets.QLabel("Validations: ", parent=self)
+        validations_list = ReorderListView(list_data=data["validations"], dcc_availability=self.availability_dict["dcc_validations"], parent=self)
+        self._reorder_lists.append(validations_list)
 
         validations_layout.addWidget(validations_list)
         # add the buttons
@@ -782,10 +795,10 @@ class CategoryDefinitions(QtWidgets.QWidget):
     def __add_extracts(self, form_layout, data):
         """Convenience method to add extracts view."""
         extracts_layout = QtWidgets.QHBoxLayout()
-        extracts_label = QtWidgets.QLabel("Extracts: ")
+        extracts_label = QtWidgets.QLabel("Extracts: ", parent=self)
 
-        extracts_list = ReorderListView(list_data=data["extracts"], dcc_availability=self.availability_dict["dcc_extracts"])
-
+        extracts_list = ReorderListView(list_data=data["extracts"], dcc_availability=self.availability_dict["dcc_extracts"], parent=self)
+        self._reorder_lists.append(extracts_list)
 
         extracts_layout.addWidget(extracts_list)
         # add the buttons
@@ -803,7 +816,6 @@ class CategoryDefinitions(QtWidgets.QWidget):
         form_layout.addRow(extracts_label, extracts_layout)
 
         # SIGNALS
-        # extracts_list.model().rowsMoved.connect(
         extracts_list.model.rowsMoved.connect(
             lambda _: self._reorder_items(extracts_list.model, data["extracts"])
         )
@@ -862,7 +874,7 @@ class ReorderListView(QtWidgets.QListView):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self.model = ReorderListModel()
+        self.model = ReorderListModel(parent=self)
         if list_data:
             self.set_data(list_data)
         self.setModel(self.model)

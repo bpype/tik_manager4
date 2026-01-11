@@ -480,35 +480,39 @@ class TikTaskView(QtWidgets.QTreeView):
         self.refresh_requested.emit()
 
 
-class TikTaskLayout(QtWidgets.QVBoxLayout):
-    def __init__(self):
+class TikTaskWidget(QtWidgets.QWidget):
+    def __init__(self, parent=None):
         """Initialize the layout"""
-        super(TikTaskLayout, self).__init__()
+        super(TikTaskWidget, self).__init__(parent)
         self._purgatory_mode = False
+
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self._main_layout.setContentsMargins(0, 0, 0, 0)
+
         header_lay = QtWidgets.QHBoxLayout()
         header_lay.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(header_lay)
-        self.label = QtWidgets.QLabel("Tasks")
+        self._main_layout.addLayout(header_lay)
+        self.label = QtWidgets.QLabel("Tasks", self)
         self.label.setStyleSheet("font-size: 14px; font-weight: bold;")
         header_lay.addWidget(self.label)
         header_lay.addStretch()
         # add a refresh button
-        self.refresh_btn = TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14)
+        self.refresh_btn = TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14, parent=self)
         header_lay.addWidget(self.refresh_btn)
-        # self.addWidget(self.label)
-        self.addWidget(HorizontalSeparator(color=(0, 255, 255)))
+        # self._main_layout.addWidget(self.label)
+        self._main_layout.addWidget(HorizontalSeparator(color=(0, 255, 255)))
 
         self.task_view = TikTaskView()
-        self.addWidget(self.task_view)
+        self._main_layout.addWidget(self.task_view)
 
         self.filter_widget = FilterWidget(self.task_view.proxy_model)
-        self.addWidget(self.filter_widget)
+        self._main_layout.addWidget(self.filter_widget)
 
         # Hide all columns except the first one
         for idx in range(1, self.task_view.header().count()):
             self.task_view.hideColumn(idx)
 
-        self.refresh_btn.clicked.connect(self.refresh)
+        self.refresh_btn.clicked.connect(lambda: self.refresh())
 
     def set_purgatory_mode(self, value):
         self.purgatory_mode = value
@@ -524,6 +528,7 @@ class TikTaskLayout(QtWidgets.QVBoxLayout):
         self.task_view.model.purgatory_mode = value
         self.refresh()
 
+    @QtCore.Slot()
     def refresh(self):
         self.task_view.refresh()
 

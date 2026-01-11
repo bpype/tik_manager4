@@ -125,7 +125,7 @@ class NewWorkDialog(QtWidgets.QDialog):
         self.primary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.primary_definition, self.primary_data, parent=self
         )
-        self.layouts.left_layout.addLayout(self.primary_content)
+        self.layouts.left_layout.addWidget(self.primary_content)
         self.widgets.name_le = self.primary_content.find("name")
         self.widgets.subproject_widget = self.primary_content.find("subproject")
         self.widgets.tasks_combo = self.primary_content.find("task")

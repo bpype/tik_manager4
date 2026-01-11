@@ -203,7 +203,7 @@ class TaskDialog(QtWidgets.QDialog):
         self.settings_layout = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             primary_definition, self.primary_data, parent=self
         )
-        self.main_layout.addLayout(self.settings_layout)
+        self.main_layout.addWidget(self.settings_layout)
 
         # create a metadata layout which has a scroll area
         metadata_layout = QtWidgets.QVBoxLayout()
@@ -227,20 +227,20 @@ class TaskDialog(QtWidgets.QDialog):
         scroll_layout = QtWidgets.QVBoxLayout(contents_widget)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.secondary_layout = CollapsibleLayout("Inherited Properties", expanded=True)
+        self.secondary_layout = CollapsibleLayout("Inherited Properties", expanded=True, parent=contents_widget)
         # self.secondary_layout.contents_widget.setEnabled(not self.management_locked)
-        scroll_layout.addLayout(self.secondary_layout)
-        self.tertiary_layout = CollapsibleLayout("New Properties", expanded=False)
-        scroll_layout.addLayout(self.tertiary_layout)
+        scroll_layout.addWidget(self.secondary_layout)
+        self.tertiary_layout = CollapsibleLayout("New Properties", expanded=False, parent=contents_widget)
+        scroll_layout.addWidget(self.tertiary_layout)
 
         secondary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             secondary_definition, self.secondary_data, parent=self
         )
-        self.secondary_layout.contents_layout.addLayout(secondary_content)
+        self.secondary_layout.contents_layout.addWidget(secondary_content)
         tertiary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             tertiary_definition, self.tertiary_data, parent=self
         )
-        self.tertiary_layout.contents_layout.addLayout(tertiary_content)
+        self.tertiary_layout.contents_layout.addWidget(tertiary_content)
 
         # create a button box
         self.button_box = TikButtonBox(

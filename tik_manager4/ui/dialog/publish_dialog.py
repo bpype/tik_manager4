@@ -860,26 +860,26 @@ class ExtractRow(QtWidgets.QHBoxLayout):
             self.checkbox.stateChanged.connect(self.toggle_enabled)
 
         self.collapsible_layout = CollapsibleLayout(
-            text=self.extract.nice_name or self.extract.name
+            text=self.extract.nice_name or self.extract.name, parent=self
         )
         self.collapsible_layout.set_color(
             text_color=self.extract.color, border_color=self.extract.color
         )
         self.collapsible_layout.label.set_font_size(10, bold=True)
-        header_layout.addLayout(self.collapsible_layout)
+        header_layout.addWidget(self.collapsible_layout)
 
         if self.extract.global_settings.properties:
             # if there are global settings exposed for the extract draw them.
             global_settings_formlayout = SettingsLayout(
-                self.extract.global_exposed_settings_ui, self.extract.global_settings
+                self.extract.global_exposed_settings_ui, self.extract.global_settings, parent=self
             )
-            self.collapsible_layout.contents_layout.addLayout(global_settings_formlayout)
+            self.collapsible_layout.contents_layout.addWidget(global_settings_formlayout)
         _settings = self.extract.settings.get(self.extract.category, {})
         if _settings:
             _settings_ui = self.extract.exposed_settings_ui[self.extract.category]
             # get the settings from the extract
-            settings_formlayout = SettingsLayout(_settings_ui, _settings)
-            self.collapsible_layout.contents_layout.addLayout(settings_formlayout)
+            settings_formlayout = SettingsLayout(_settings_ui, _settings, parent=self)
+            self.collapsible_layout.contents_layout.addWidget(settings_formlayout)
         if not self.extract.global_settings.properties and not _settings:
             self.collapsible_layout.expand_button.hide()
 

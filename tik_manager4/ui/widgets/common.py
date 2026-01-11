@@ -153,10 +153,10 @@ class TikButton(QtWidgets.QPushButton, StyleEditor):
         text_color="#b1b1b1",
         border_color="#1e1e1e",
         background_color="#404040",
-        *args,
+        parent=None,
         **kwargs,
     ):
-        super().__init__()
+        super().__init__(parent)
         # make sure the button has a font defined for different OS scales
         self.setText(text)
         self.text_color = text_color
@@ -200,8 +200,8 @@ class TikButton(QtWidgets.QPushButton, StyleEditor):
 class TikIconButton(TikButton):
     """Button specific for fixed sized icons."""
 
-    def __init__(self, icon_name=None, circle=True, size=22, icon_size=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, icon_name=None, circle=True, size=22, icon_size=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.radius = int(size * 0.5)
         self.circle = circle
         self.set_size(size)

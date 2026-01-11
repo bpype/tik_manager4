@@ -793,32 +793,36 @@ class TikCategoryView(QtWidgets.QTreeView):
         return
 
 
-class TikCategoryLayout(QtWidgets.QVBoxLayout):
-    """Custom QVBoxLayout for the category layout."""
+class TikCategoryWidget(QtWidgets.QWidget):
+    """Custom QWidget for the category layout."""
     mode_changed = QtCore.Signal(int)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent=None, *args, **kwargs):
         """Initialize the layout."""
-        super(TikCategoryLayout, self).__init__(*args, **kwargs)
+        super(TikCategoryWidget, self).__init__(parent, *args, **kwargs)
         self._purgatory_mode = False # if true, shows deleted items too.
+
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self._main_layout.setContentsMargins(0, 0, 0, 0)
+
         header_lay = QtWidgets.QHBoxLayout()
         header_lay.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(header_lay)
-        self.label = QtWidgets.QLabel("Works")
+        self._main_layout.addLayout(header_lay)
+        self.label = QtWidgets.QLabel("Works", self)
         self.label.setStyleSheet("font-size: 14px; font-weight: bold;")
         header_lay.addWidget(self.label)
         header_lay.addStretch()
         # add a refresh button
-        self.refresh_btn = TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14)
+        self.refresh_btn = TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14, parent=self)
         header_lay.addWidget(self.refresh_btn)
 
-        self.addWidget(HorizontalSeparator(color=(174, 215, 91)))
+        self._main_layout.addWidget(HorizontalSeparator(color=(174, 215, 91)))
 
         # create two radio buttons one for work and one for publish
-        self.work_radio_button = QtWidgets.QRadioButton("Work")
+        self.work_radio_button = QtWidgets.QRadioButton("Work", self)
         # make the radio button label larger
         self.work_radio_button.setFont(QtGui.QFont("Arial", 10))
-        self.publish_radio_button = QtWidgets.QRadioButton("Publish")
+        self.publish_radio_button = QtWidgets.QRadioButton("Publish", self)
         self.publish_radio_button.setFont(QtGui.QFont("Arial", 10))
 
         # TODO: this needs to come from the last state of the user
@@ -834,22 +838,22 @@ class TikCategoryLayout(QtWidgets.QVBoxLayout):
         self.radio_button_layout.addStretch()
 
         # add the radio button layout to the main layout
-        self.addLayout(self.radio_button_layout)
+        self._main_layout.addLayout(self.radio_button_layout)
 
-        self.category_tab_widget = QtWidgets.QTabWidget()
+        self.category_tab_widget = QtWidgets.QTabWidget(self)
         self.category_tab_widget.setMaximumSize(QtCore.QSize(16777215, 23))
         self.category_tab_widget.setTabPosition(QtWidgets.QTabWidget.North)
         self.category_tab_widget.setElideMode(QtCore.Qt.ElideNone)
         self.category_tab_widget.setUsesScrollButtons(True)
         self.category_tab_widget.setObjectName("category_tab_widget")
 
-        self.addWidget(self.category_tab_widget)
+        self._main_layout.addWidget(self.category_tab_widget)
 
         self.work_tree_view = TikCategoryView()
-        self.addWidget(self.work_tree_view)
+        self._main_layout.addWidget(self.work_tree_view)
 
         self.filter_widget = FilterWidget(self.work_tree_view.proxy_model)
-        self.addWidget(self.filter_widget)
+        self._main_layout.addWidget(self.filter_widget)
 
         self.task = None
 
@@ -868,7 +872,7 @@ class TikCategoryLayout(QtWidgets.QVBoxLayout):
 
         self.pre_tab = None
 
-        self.refresh_btn.clicked.connect(self.refresh)
+        self.refresh_btn.clicked.connect(lambda: self.refresh())
 
     def set_purgatory_mode(self, state):
         """Set the show all state.
@@ -1002,6 +1006,7 @@ class TikCategoryLayout(QtWidgets.QVBoxLayout):
                 if work_obj.publish.versions
             ]
 
+    @QtCore.Slot()
     def refresh(self):
         """Refresh the current category."""
         current_category_index = self.category_tab_widget.currentIndex()
