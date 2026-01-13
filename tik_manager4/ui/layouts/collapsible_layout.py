@@ -154,6 +154,9 @@ QPushButton
         border-color: {border_color};
         }}"""
 
-        self.frame._append_style(color_style)
-        self.expand_button._append_style(color_style)
-        self.label._append_style(color_style)
+        # self.frame._append_style(color_style)
+        # self.expand_button._append_style(color_style)
+        # self.label._append_style(color_style)
+        self.frame.setStyleSheet(color_style)
+        self.expand_button.setStyleSheet(color_style)
+        self.label.setStyleSheet(color_style)

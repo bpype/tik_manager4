@@ -255,7 +255,7 @@ class PublishSceneDialog(QtWidgets.QDialog):
         # -------------------
         for validator_name, validator in self.project.publisher.validators.items():
             validate_row = ValidateRow(validator_object=validator)
-            self.validations_scroll_lay.addLayout(validate_row)
+            self.validations_scroll_lay.addWidget(validate_row)
             self._validator_widgets.append(validate_row)
         # -------------------
 
@@ -278,7 +278,7 @@ class PublishSceneDialog(QtWidgets.QDialog):
         for _extractor_name, extractor in self.project.publisher.extractors.items():
             # get the metadata for the extractor
             extract_row = ExtractRow(extract_object=extractor)
-            self.extracts_scroll_lay.addLayout(extract_row)
+            self.extracts_scroll_lay.addWidget(extract_row)
             self._extractor_widgets.append(extract_row)
         # -------------------
 
@@ -659,14 +659,19 @@ class PublishSceneDialog(QtWidgets.QDialog):
             return
 
 
-class ValidateRow(QtWidgets.QHBoxLayout):
-    """Custom Layout for validation rows."""
+class ValidateRow(QtWidgets.QWidget):
+    """Custom Widget for validation rows."""
 
-    def __init__(self, validator_object, toaster=None, *args, **kwargs):
+    def __init__(self, validator_object, toaster=None, parent=None):
         """Initialize the ValidateRow."""
-        super(ValidateRow, self).__init__(*args, **kwargs)
+        super().__init__(parent=parent)
         self.validator = validator_object
         self.name = self.validator.nice_name or self.validator.name
+
+        # Create the main layout for this widget
+        self.main_layout = QtWidgets.QHBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+
         self.build_widgets()
         self.update_state()
 
@@ -679,12 +684,12 @@ class ValidateRow(QtWidgets.QHBoxLayout):
         self.status_icon.setStyleSheet("background-color: gray;")
         # set the width to 10px
         self.status_icon.setFixedWidth(10)
-        self.addWidget(self.status_icon)
+        self.main_layout.addWidget(self.status_icon)
 
         # checkbox
         self.checkbox = QtWidgets.QCheckBox()
         self.checkbox.setChecked(self.validator.checked_by_default)
-        self.addWidget(self.checkbox)
+        self.main_layout.addWidget(self.checkbox)
 
         # button
         self.button = TikButton(text=self.name)
@@ -693,7 +698,7 @@ class ValidateRow(QtWidgets.QHBoxLayout):
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
         self.button.setFixedHeight(26)
-        self.addWidget(self.button)
+        self.main_layout.addWidget(self.button)
 
         # maintenance icons
         self.info_pb = TikIconButton(icon_name="info.png")
@@ -702,9 +707,9 @@ class ValidateRow(QtWidgets.QHBoxLayout):
         self.select_pb.set_size(26)
         self.fix_pb = TikIconButton(icon_name="fix.png")
         self.fix_pb.set_size(26)
-        self.addWidget(self.info_pb)
-        self.addWidget(self.select_pb)
-        self.addWidget(self.fix_pb)
+        self.main_layout.addWidget(self.info_pb)
+        self.main_layout.addWidget(self.select_pb)
+        self.main_layout.addWidget(self.fix_pb)
 
         # SIGNALS
         self.checkbox.stateChanged.connect(self.update_state)
@@ -816,12 +821,12 @@ class ValidateRow(QtWidgets.QHBoxLayout):
             self.info_pb.setEnabled(True)
 
 
-class ExtractRow(QtWidgets.QHBoxLayout):
-    """Custom Layout for extract rows."""
+class ExtractRow(QtWidgets.QWidget):
+    """Custom Widget for extract rows."""
 
-    def __init__(self, extract_object, *args, **kwargs):
+    def __init__(self, extract_object, parent=None):
         """Initialize the ExtractRow."""
-        super().__init__(*args, **kwargs)
+        super().__init__(parent=parent)
         self.extract = extract_object
         self.status_icon = None
         self.label = None
@@ -830,6 +835,10 @@ class ExtractRow(QtWidgets.QHBoxLayout):
         self.global_settings_data = None
         self.settings_data = None
         self.info = None
+
+        # Create the main layout for this widget
+        self.main_layout = QtWidgets.QHBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.build_widgets()
 
@@ -840,11 +849,11 @@ class ExtractRow(QtWidgets.QHBoxLayout):
         self.status_icon = QtWidgets.QFrame()
         # set the width to 10px
         self.status_icon.setFixedWidth(10)
-        self.addWidget(self.status_icon)
+        self.main_layout.addWidget(self.status_icon)
 
         # main
         main_layout = QtWidgets.QVBoxLayout()
-        self.addLayout(main_layout)
+        self.main_layout.addLayout(main_layout)
         header_layout = QtWidgets.QHBoxLayout()
         header_layout.setSpacing(0)
         main_layout.addLayout(header_layout)
@@ -859,9 +868,8 @@ class ExtractRow(QtWidgets.QHBoxLayout):
             # SIGNALS
             self.checkbox.stateChanged.connect(self.toggle_enabled)
 
-        self.collapsible_layout = CollapsibleLayout(
-            text=self.extract.nice_name or self.extract.name, parent=self
-        )
+        _name = self.extract.nice_name or self.extract.name
+        self.collapsible_layout = CollapsibleLayout(_name, expanded=False, parent=self)
         self.collapsible_layout.set_color(
             text_color=self.extract.color, border_color=self.extract.color
         )
@@ -886,7 +894,7 @@ class ExtractRow(QtWidgets.QHBoxLayout):
         # maintenance icons
         self.info = TikIconButton(icon_name=self.extract.name, circle=True)
         self.info.set_size(32)
-        self.addWidget(self.info)
+        self.main_layout.addWidget(self.info)
 
         # SIGNALS
         self.info.clicked.connect(self.pop_info)
