@@ -324,7 +324,7 @@ class SettingsDialog(QtWidgets.QDialog):
         settings_v_lay.addLayout(header_layout)
 
         # add the title
-        title_label = HeaderLabel("Change User Password")
+        title_label = HeaderLabel(text="Change User Password")
         header_layout.addWidget(title_label)
 
         # add a label to show the path of the settings file
@@ -675,7 +675,7 @@ class SettingsDialog(QtWidgets.QDialog):
         settings_v_lay.addLayout(header_layout)
 
         # add the title
-        title_label = HeaderLabel(title)
+        title_label = HeaderLabel(text=title)
         header_layout.addWidget(title_label)
 
         # add a label to show the path of the settings file

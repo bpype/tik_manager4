@@ -112,7 +112,7 @@ class NewWorkDialog(QtWidgets.QDialog):
     def build_ui(self):
         """Build the UI elements"""
 
-        self.widgets.header_lbl = HeaderLabel("New Work")
+        self.widgets.header_lbl = HeaderLabel(text="New Work")
         self.widgets.header_lbl.set_color("orange")
         self.layouts.header_layout.addWidget(self.widgets.header_lbl)
         self.widgets.resolved_path_lbl = ResolvedText("" * 30)
@@ -345,7 +345,7 @@ class NewVersionDialog(QtWidgets.QDialog):
         self.resize(QtCore.QSize(size_hint.width() + 10, 300))
 
     def build_ui(self):
-        header = HeaderLabel(self.windowTitle())
+        header = HeaderLabel(text=self.windowTitle())
         _color = "orange" if not self.ingest else "pink"
         header.set_color(_color)
         self.master_layout.addWidget(header)

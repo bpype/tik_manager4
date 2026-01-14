@@ -57,7 +57,7 @@ class NewUserDialog(QtWidgets.QDialog):
         form_layout = QtWidgets.QFormLayout()
         self.layouts.body_layout.addLayout(form_layout)
 
-        header = HeaderLabel("Add New User")
+        header = HeaderLabel(text="Add New User")
         header.set_color("orange")
         self.layouts.header_layout.addWidget(header)
 

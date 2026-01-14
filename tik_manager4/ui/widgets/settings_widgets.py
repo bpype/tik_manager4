@@ -68,7 +68,7 @@ class UsersDefinitions(QtWidgets.QWidget):
 
     def build_static_widgets(self):
         """Build static widgets."""
-        title_label = HeaderLabel(self.title)
+        title_label = HeaderLabel(text=self.title)
         self.layouts.header_layout.addWidget(title_label)
 
         # add a label to show the path of the settings file
@@ -282,7 +282,7 @@ class MetadataDefinitions(QtWidgets.QWidget):
 
     def build_static_widgets(self):
         """Build static widgets."""
-        title_label = HeaderLabel(self.title)
+        title_label = HeaderLabel(text=self.title)
         self.layouts.header_layout.addWidget(title_label)
 
         # add a label to show the path of the settings file
@@ -513,7 +513,7 @@ class CategoryDefinitions(QtWidgets.QWidget):
 
     def build_static_widgets(self):
         """Build static widgets."""
-        title_label = HeaderLabel(self.title)
+        title_label = HeaderLabel(text=self.title)
         # title_label.setMaximumHeight(30)
         self.layouts.header_layout.addWidget(title_label)
 

@@ -280,7 +280,7 @@ class TikLabel(QtWidgets.QLabel):
     DEFAULT_BORDER_COLOR = "#1e1e1e"
 
     def __init__(self, text="", font_size=10, bold=False, color=(255, 255, 255), parent=None, **kwargs):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, text=text)
         self.text_color = self.DEFAULT_TEXT_COLOR
         self.border_color = self.DEFAULT_BORDER_COLOR
         self.color = color
