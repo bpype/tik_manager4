@@ -1,7 +1,5 @@
 """Common usage basic widgets."""
 import math
-import collections.abc
-import re
 
 from tik_manager4.ui.Qt import QtWidgets, QtCore, QtGui
 from tik_manager4.ui import pick
@@ -51,63 +49,6 @@ QPushButton:pressed {
 """
 
 
-class StyleEditor:
-    """Convenience class to edit the style of a widget."""
-
-    background_color = "#404040"
-    text_color = "#b1b1b1"
-    border_color = "#1e1e1e"
-
-    def _update(self, old, new):
-        for k, v in new.items():
-            if isinstance(v, collections.abc.Mapping):
-                old[k] = self._update(old.get(k, {}), v)
-            else:
-                old[k] = v
-        return old
-
-    def _append_style(self, new_style):
-        """Append style to the current style sheet."""
-        # if the style argument is not dictionary, convert it to dictionary
-        if not isinstance(new_style, dict):
-            new_style = self.stylesheet_to_dictionary(new_style)
-        current_style_dict = self.stylesheet_to_dictionary(self.styleSheet())
-
-        current_style_dict = self._update(current_style_dict, new_style)
-
-        self.setStyleSheet(self.dictionary_to_stylesheet(current_style_dict))
-        self.style().unpolish(self)
-        self.style().polish(self)
-
-    @staticmethod
-    def stylesheet_to_dictionary(stylesheet):
-        # Regular expression patterns for extracting style information
-        selector_pattern = re.compile(
-            r"(\w+(?:\s*:\s*\w+)?(?:\[[^\]]+\])?)\s*{([^}]*)}"
-        )
-        property_pattern = re.compile(r"\s*([^:]+)\s*:\s*([^;]+);")
-
-        styles = {}
-        for match in selector_pattern.finditer(stylesheet):
-            selector = match.group(1)
-            properties = {}
-            for prop_match in property_pattern.finditer(match.group(2)):
-                properties[prop_match.group(1)] = prop_match.group(2)
-            styles[selector] = properties
-
-        return styles
-
-    @staticmethod
-    def dictionary_to_stylesheet(styles):
-        stylesheet = ""
-        for selector, properties in styles.items():
-            stylesheet += f"{selector} {{\n"
-            for prop, value in properties.items():
-                stylesheet += f"    {prop}: {value};\n"
-            stylesheet += "}\n"
-
-        return stylesheet
-
 
 class ClickableFrame(QtWidgets.QFrame):
     """Clickable frame widget."""
@@ -121,10 +62,12 @@ class ClickableFrame(QtWidgets.QFrame):
         self.clicked.emit()
         return super().mousePressEvent(event)
 
-class StyleFrame(ClickableFrame, StyleEditor):
-    """Frame with custom styler."""
+class StyleFrame(ClickableFrame):
+    """Frame with custom styling support."""
 
-    pass
+    def set_style(self, stylesheet):
+        """Set the stylesheet for this frame."""
+        self.setStyleSheet(stylesheet)
 
 
 def lighten_color(color_str, factor=110):
@@ -144,64 +87,92 @@ def lighten_color(color_str, factor=110):
         factor)  # Increase brightness by the given factor
     return lighter_color.name()  # Returns as hex string
 
-class TikButton(QtWidgets.QPushButton, StyleEditor):
+class TikButton(QtWidgets.QPushButton):
     """Unified button class for the whole app."""
+
+    # Default colors
+    DEFAULT_TEXT_COLOR = "#b1b1b1"
+    DEFAULT_BACKGROUND_COLOR = "#404040"
+    DEFAULT_BORDER_COLOR = "#1e1e1e"
 
     def __init__(self,
         text="",
         font_size=10,
-        text_color="#b1b1b1",
-        border_color="#1e1e1e",
-        background_color="#404040",
-        *args,
+        text_color=None,
+        border_color=None,
+        background_color=None,
+        parent=None,
         **kwargs,
     ):
-        super().__init__()
-        # make sure the button has a font defined for different OS scales
+        super().__init__(parent=parent)
+        self.text_color = text_color or self.DEFAULT_TEXT_COLOR
+        self.border_color = border_color or self.DEFAULT_BORDER_COLOR
+        self.background_color = background_color or self.DEFAULT_BACKGROUND_COLOR
         self.setText(text)
-        self.text_color = text_color
-        self.border_color = border_color
-        self.background_color = background_color
         self.set_font_size(font_size)
         self.setStyleSheet(BUTTON_STYLE)
-        self.set_color(text_color, background_color, border_color)
+        self.set_color(self.text_color, self.background_color, self.border_color)
 
     def set_font_size(self, font_size):
         self.setFont(QtGui.QFont(FONT, font_size))
 
     def set_color(self, text_color=None, background_color=None, border_color=None):
+        """Set the button colors.
 
-        color, background_color, border_color = [
+        Args:
+            text_color: Color for text (hex string or RGB tuple/list)
+            background_color: Color for background (hex string or RGB tuple/list)
+            border_color: Color for border (hex string or RGB tuple/list)
+        """
+        text_color, background_color, border_color = [
             "rgb({}, {}, {})".format(*var) if isinstance(var, (tuple, list)) else var
             for var in [text_color, background_color, border_color]
         ]
 
-        text_color = text_color or self.text_color
-        background_color = background_color or self.background_color
-        border_color = border_color or self.border_color
+        self.text_color = text_color or self.text_color
+        self.background_color = background_color or self.background_color
+        self.border_color = border_color or self.border_color
 
-        color_style = f"""
-        QPushButton
-        {{
-        color: {text_color};
-        background-color: {background_color};
-        border-color: {border_color};
-        }}
-        QPushButton:hover
-        {{
-        background-color: {lighten_color(background_color)};
-        border: 1px solid #ff8d1c;
-        }}
-        """
+        hover_bg = lighten_color(self.background_color)
 
-        self._append_style(color_style)
+        stylesheet = f"""
+QPushButton {{
+    color: {self.text_color};
+    background-color: {self.background_color};
+    border-width: 1px;
+    border-color: {self.border_color};
+    border-style: solid;
+    padding: 5px;
+    font-size: 12px;
+    border-radius: 4px;
+}}
+QPushButton:hover {{
+    background-color: {hover_bg};
+    border: 1px solid #ff8d1c;
+}}
+QPushButton:disabled {{
+    color: #505050;
+    background-color: #303030;
+    border: 1px solid #404040;
+    border-width: 1px;
+    border-color: #1e1e1e;
+    border-style: solid;
+    padding: 5px;
+    font-size: 12px;
+}}
+QPushButton:pressed {{
+    background-color: #ff8d1c;
+    border: 1px solid #ff8d1c;
+}}
+"""
+        self.setStyleSheet(stylesheet)
 
 
 class TikIconButton(TikButton):
     """Button specific for fixed sized icons."""
 
-    def __init__(self, icon_name=None, circle=True, size=22, icon_size=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, icon_name=None, circle=True, size=22, icon_size=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.radius = int(size * 0.5)
         self.circle = circle
         self.set_size(size)
@@ -219,17 +190,42 @@ class TikIconButton(TikButton):
     def set_size(self, size):
         self.setFixedSize(size, size)
         self.radius = int(size * 0.5)
-        if self.circle:
-            borders_style = {
-                "QPushButton": {"border-radius": f"{self.radius}"},
-                "QPushButton:disabled": {"border-radius": f"{self.radius}"},
-            }
-        else:
-            borders_style = {
-                "QPushButton": {"border-radius": "4px"},
-                "QPushButton:disabled": {"border-radius": "4px"},
-            }
-        self._append_style(borders_style)
+        border_radius = f"{self.radius}px" if self.circle else "4px"
+
+        hover_bg = lighten_color(self.background_color)
+
+        stylesheet = f"""
+QPushButton {{
+    color: {self.text_color};
+    background-color: {self.background_color};
+    border-width: 1px;
+    border-color: {self.border_color};
+    border-style: solid;
+    padding: 5px;
+    font-size: 12px;
+    border-radius: {border_radius};
+}}
+QPushButton:hover {{
+    background-color: {hover_bg};
+    border: 1px solid #ff8d1c;
+}}
+QPushButton:disabled {{
+    color: #505050;
+    background-color: #303030;
+    border: 1px solid #404040;
+    border-width: 1px;
+    border-color: #1e1e1e;
+    border-style: solid;
+    padding: 5px;
+    font-size: 12px;
+    border-radius: {border_radius};
+}}
+QPushButton:pressed {{
+    background-color: #ff8d1c;
+    border: 1px solid #ff8d1c;
+}}
+"""
+        self.setStyleSheet(stylesheet)
 
     @staticmethod
     def square_to_circle_multiplier(side_length):
@@ -243,7 +239,7 @@ class TikButtonBox(QtWidgets.QDialogButtonBox):
     """Unified button box class for the whole app."""
 
     def __init__(self, *args, font_size=10, **kwargs):
-        super(TikButtonBox, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.font_size = font_size
         for button in self.buttons():
             self.modifyButton(button)
@@ -257,7 +253,7 @@ class TikButtonBox(QtWidgets.QDialogButtonBox):
         if event.type() == QtCore.QEvent.ChildAdded:
             child = event.child()
             self.modifyButton(child)
-        return super(TikButtonBox, self).event(event)
+        return super().event(event)
 
     def modifyButton(self, button):
         button.setFont(QtGui.QFont(FONT, self.font_size))
@@ -266,19 +262,27 @@ class TikButtonBox(QtWidgets.QDialogButtonBox):
 
 
 class TikMessageBox(QtWidgets.QMessageBox):
+    """Message box with custom font."""
+
     def __init__(self, *args, font_size=10, **kwargs):
-        super(TikMessageBox, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.set_font_size(font_size)
 
     def set_font_size(self, font_size):
         self.setFont(QtGui.QFont(FONT, font_size))
 
 
-class TikLabel(QtWidgets.QLabel, StyleEditor):
+class TikLabel(QtWidgets.QLabel):
     """Unified label class for the whole app."""
 
-    def __init__(self, *args, text="", font_size=10, bold=False, color=(255, 255, 255), **kwargs):
-        super(TikLabel, self).__init__(*args, **kwargs)
+    # Default colors
+    DEFAULT_TEXT_COLOR = "#b1b1b1"
+    DEFAULT_BORDER_COLOR = "#1e1e1e"
+
+    def __init__(self, text="", font_size=10, bold=False, color=(255, 255, 255), parent=None, **kwargs):
+        super().__init__(parent=parent, text=text)
+        self.text_color = self.DEFAULT_TEXT_COLOR
+        self.border_color = self.DEFAULT_BORDER_COLOR
         self.color = color
         self.set_font_size(font_size, bold=bold)
         self.set_color(text_color=self.color, border_color=self.color)
@@ -290,8 +294,14 @@ class TikLabel(QtWidgets.QLabel, StyleEditor):
             self.setFont(QtGui.QFont(FONT, font_size))
 
     def set_color(self, text_color=None, background_color=None, border_color=None):
+        """Set the label colors.
 
-        color, background_color, border_color = [
+        Args:
+            text_color: Color for text (hex string or RGB tuple/list)
+            background_color: Unused, kept for API compatibility
+            border_color: Color for border (hex string or RGB tuple/list)
+        """
+        text_color, _, border_color = [
             "rgb({}, {}, {})".format(*var) if isinstance(var, (tuple, list)) else var
             for var in [text_color, background_color, border_color]
         ]
@@ -300,13 +310,12 @@ class TikLabel(QtWidgets.QLabel, StyleEditor):
         border_color = border_color or self.border_color
 
         color_style = f"""
-        QLabel
-        {{
-        color: {text_color};
-        border-color: {border_color};
-        }}"""
+QLabel {{
+    color: {text_color};
+    border-color: {border_color};
+}}"""
 
-        self._append_style(color_style)
+        self.setStyleSheet(color_style)
 
     def set_text(self, text):
         self.setText(text)
@@ -329,7 +338,7 @@ class TikLabelButton(TikButton):
     }}"""
 
     def __init__(self, *args, color=(255, 255, 255), **kwargs):
-        super(TikLabelButton, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.normal_text = kwargs.get("text", ">")
         self.clicked_text = "˅"
         self.setText(self.normal_text)
@@ -364,7 +373,7 @@ QLabel
 """
 
     def __init__(self, *args, **kwargs):
-        super(HeaderLabel, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.setProperty("header", True)
         self.setIndent(10)
         self.setFixedHeight(30)
@@ -373,32 +382,30 @@ QLabel
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.color = (255, 0, 255)
         self.setStyleSheet(self.style_sheet)
-        self.style().unpolish(self)
-        self.style().polish(self)
 
     def set_font_size(self, font_size, bold=True):
-        super(HeaderLabel, self).set_font_size(font_size, bold)
+        super().set_font_size(font_size, bold)
 
 
 class ResolvedText(TikLabel):
     """Label for resolved paths, names etc."""
 
     def __init__(self, *args, **kwargs):
-        super(ResolvedText, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # make is selectable
         self.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         # make is wrap
         self.setWordWrap(True)
 
     def set_font_size(self, font_size, bold=True):
-        super(ResolvedText, self).set_font_size(font_size, bold)
+        super().set_font_size(font_size, bold)
 
 
 class VerticalSeparator(QtWidgets.QLabel):
-    """Simple horizontal separator."""
+    """Simple vertical separator."""
 
     def __init__(self, color=(100, 100, 100), height=25, width=20):
-        super(VerticalSeparator, self).__init__()
+        super().__init__()
         self._pixmap = QtGui.QPixmap(2, 100)
         self.set_color(color)
         self.setPixmap(self._pixmap)
@@ -411,10 +418,10 @@ class VerticalSeparator(QtWidgets.QLabel):
 
 
 class HorizontalSeparator(QtWidgets.QLabel):
-    """Simple vertical separator."""
+    """Simple horizontal separator."""
 
     def __init__(self, color=(100, 100, 100), height=1, width=None):
-        super(HorizontalSeparator, self).__init__()
+        super().__init__()
         self.set_color(color)
         self.setFrameShape(QtWidgets.QFrame.HLine)
         self.setFrameShadow(QtWidgets.QFrame.Sunken)

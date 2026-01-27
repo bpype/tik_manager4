@@ -35,31 +35,31 @@ class SetProjectDialog(QtWidgets.QDialog):
         main_layout.addLayout(header_layout)
         split_layout = QtWidgets.QHBoxLayout()
         main_layout.addLayout(split_layout)
-        splitter = QtWidgets.QSplitter()
+        splitter = QtWidgets.QSplitter(parent=self)
         # splitter.setHandleWidth(20)
         split_layout.addWidget(splitter)
-        folders_tree_widget = QtWidgets.QWidget(splitter)
+        folders_tree_widget = QtWidgets.QWidget(parent=splitter)
         folders_tree_layout = QtWidgets.QVBoxLayout(folders_tree_widget)
         folders_tree_layout.setContentsMargins(0, 0, 0, 0)
-        bookmarks_widget = QtWidgets.QWidget(splitter)
+        bookmarks_widget = QtWidgets.QWidget(parent=splitter)
         bookmarks_layout = QtWidgets.QVBoxLayout(bookmarks_widget)
         bookmarks_layout.setContentsMargins(0, 0, 0, 0)
         buttons_layout = QtWidgets.QHBoxLayout()
         main_layout.addLayout(buttons_layout)
 
-        look_in_lbl = QtWidgets.QLabel(text="Look in:")
-        browser_wgt = path_browser.PathBrowser("lookIn")
+        look_in_lbl = QtWidgets.QLabel(text="Look in:", parent=self)
+        browser_wgt = path_browser.PathBrowser("lookIn", parent=self)
         browser_wgt.widget.setText(self.main_object.project.folder)
         header_layout.addWidget(look_in_lbl)
         header_layout.addWidget(browser_wgt)
 
-        recent_pb = TikButton(text="Recent")
+        recent_pb = TikButton(text="Recent", parent=self)
         recent_pb.setToolTip("Recent projects")
         header_layout.addWidget(recent_pb)
 
         # projects side
         self.folders_tree = QtWidgets.QTreeView(
-            splitter,
+            parent=splitter,
             minimumSize=QtCore.QSize(0, 0),
             dragEnabled=True,
             dragDropMode=QtWidgets.QAbstractItemView.DragOnly,
@@ -70,11 +70,11 @@ class SetProjectDialog(QtWidgets.QDialog):
             frameShape=QtWidgets.QFrame.NoFrame,
         )
         folders_tree_layout.addWidget(self.folders_tree)
-        directory_filter = QtWidgets.QLineEdit()
+        directory_filter = QtWidgets.QLineEdit(parent=self)
         directory_filter.setPlaceholderText("Filter")
         folders_tree_layout.addWidget(directory_filter)
 
-        self.source_model = QtWidgets.QFileSystemModel()
+        self.source_model = QtWidgets.QFileSystemModel(parent=self)
         self.source_model.setNameFilterDisables(False)
         self.source_model.setNameFilters(["*"])
         self.source_model.setRootPath(self.main_object.project.folder)
@@ -87,7 +87,7 @@ class SetProjectDialog(QtWidgets.QDialog):
         selection_model = self.folders_tree.selectionModel()
 
         self.bookmarks_droplist = DropList(
-            name="Bookmarks", buttons_position="down", buttons=["+", "-"]
+            name="Bookmarks", buttons_position="down", buttons=["+", "-"], parent=self
         )
         plus_btn = self.bookmarks_droplist.buttons[0]
         minus_btn = self.bookmarks_droplist.buttons[1]
@@ -99,7 +99,7 @@ class SetProjectDialog(QtWidgets.QDialog):
         # buttons
         # create a button box as "set" and "cancel"
         button_box = TikButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, parent=self
         )
         buttons_layout.addWidget(button_box)
 
@@ -116,7 +116,7 @@ class SetProjectDialog(QtWidgets.QDialog):
         selection_model.selectionChanged.connect(self.activate_folders)
         self.bookmarks_droplist.list.currentRowChanged.connect(self.activate_bookmarks)
         recent_pb.clicked.connect(self.recents_pop_menu)
-        browser_wgt.com.valueChanged.connect(self.set_tree_root)
+        browser_wgt.com.valueChanged.connect(lambda: self.set_tree_root())
 
     def set_tree_root(self, root_path):
         """Set the root of the tree to the given path."""
@@ -127,9 +127,9 @@ class SetProjectDialog(QtWidgets.QDialog):
         """Pop menu for recent projects."""
         recents_list = reversed(self.main_object.user.get_recent_projects())
 
-        zort_menu = QtWidgets.QMenu(self)
+        zort_menu = QtWidgets.QMenu(parent=self)
         for p in recents_list:
-            _temp_action = QtWidgets.QAction(p, self)
+            _temp_action = QtWidgets.QAction(p, parent=self)
             zort_menu.addAction(_temp_action)
             _temp_action.triggered.connect(
                 lambda _ignore=p, item=p: self.set_and_close(item)

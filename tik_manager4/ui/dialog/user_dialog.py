@@ -57,7 +57,7 @@ class NewUserDialog(QtWidgets.QDialog):
         form_layout = QtWidgets.QFormLayout()
         self.layouts.body_layout.addLayout(form_layout)
 
-        header = HeaderLabel("Add New User")
+        header = HeaderLabel(text="Add New User")
         header.set_color("orange")
         self.layouts.header_layout.addWidget(header)
 
@@ -171,7 +171,7 @@ class LoginDialog(QtWidgets.QDialog):
         main_layout.addLayout(self.form_layout)
 
         # button box
-        self.button_box = TikButtonBox()
+        self.button_box = TikButtonBox(parent=self)
         self.button_box.setStandardButtons(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
         )
@@ -188,7 +188,7 @@ class LoginDialog(QtWidgets.QDialog):
         """Build the UI elements."""
         user_name_lbl = QtWidgets.QLabel()
         user_name_lbl.setText("User :")
-        self.widgets.users_combo = QtWidgets.QComboBox()
+        self.widgets.users_combo = QtWidgets.QComboBox(self)
         self.widgets.users_combo.addItems(self.user_object.commons.users.keys)
 
         # get the activeUser

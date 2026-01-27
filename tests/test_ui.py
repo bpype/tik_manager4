@@ -215,3 +215,110 @@ class TestUI:
         qtbot.addWidget(_widget)
         assert utils.apply_stylesheet(str(_stylesheet), _widget) == True
         assert utils.apply_stylesheet(str(tmp_path / "test_stylesheet.NA"), _widget) == False
+
+
+class TestPySide6Compatibility:
+    """Tests for PySide6.8.3 compatibility improvements.
+
+    These tests verify that custom layout classes are now proper QWidget subclasses
+    with correct parent-child relationships to prevent crashes during shutdown.
+    """
+
+    def test_collapsible_layout_is_qwidget(self, qtbot):
+        """Test that CollapsibleLayout is a QWidget subclass."""
+        from tik_manager4.ui.layouts.collapsible_layout import CollapsibleLayout
+        assert issubclass(CollapsibleLayout, QtWidgets.QWidget)
+
+        # Create instance and verify widget hierarchy
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = CollapsibleLayout("Test", expanded=True, parent=parent)
+        assert layout.parent() == parent
+        assert isinstance(layout.frame, QtWidgets.QFrame)
+        assert isinstance(layout.contents_widget, QtWidgets.QWidget)
+
+    def test_tik_subproject_layout_is_qwidget(self, qtbot, main_object):
+        """Test that TikSubProjectLayout is a QWidget subclass."""
+        from tik_manager4.ui.mcv.subproject_mcv import TikSubProjectWidget
+        assert issubclass(TikSubProjectWidget, QtWidgets.QWidget)
+
+        # Create instance and verify widget hierarchy
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = TikSubProjectWidget(main_object.project, parent=parent)
+        assert layout.parent() == parent
+        assert isinstance(layout.sub_view, QtWidgets.QTreeView)
+        assert isinstance(layout.refresh_btn, QtWidgets.QPushButton)
+
+    def test_tik_task_layout_is_qwidget(self, qtbot):
+        """Test that TikTaskLayout is a QWidget subclass."""
+        from tik_manager4.ui.mcv.task_mcv import TikTaskWidget
+        assert issubclass(TikTaskWidget, QtWidgets.QWidget)
+
+        # Create instance and verify widget hierarchy
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = TikTaskWidget(parent=parent)
+        assert layout.parent() == parent
+        assert isinstance(layout.task_view, QtWidgets.QTreeView)
+        assert isinstance(layout.refresh_btn, QtWidgets.QPushButton)
+
+    def test_tik_category_layout_is_qwidget(self, qtbot):
+        """Test that TikCategoryLayout is a QWidget subclass."""
+        from tik_manager4.ui.mcv.category_mcv import TikCategoryWidget
+        assert issubclass(TikCategoryWidget, QtWidgets.QWidget)
+
+        # Create instance and verify widget hierarchy
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = TikCategoryWidget(parent=parent)
+        assert layout.parent() == parent
+        assert isinstance(layout.work_tree_view, QtWidgets.QTreeView)
+        assert isinstance(layout.refresh_btn, QtWidgets.QPushButton)
+
+    def test_tik_version_layout_is_qwidget(self, qtbot, main_object):
+        """Test that TikVersionLayout is a QWidget subclass."""
+        from tik_manager4.ui.mcv.version_mcv import TikVersionWidget
+        assert issubclass(TikVersionWidget, QtWidgets.QWidget)
+
+        # Create instance and verify widget hierarchy
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = TikVersionWidget(main_object.project, parent=parent)
+        assert layout.parent() == parent
+
+    def test_collapsible_layout_signal_connections(self, qtbot):
+        """Test that CollapsibleLayout signal connections work correctly."""
+        from tik_manager4.ui.layouts.collapsible_layout import CollapsibleLayout
+
+        parent = QtWidgets.QWidget()
+        qtbot.addWidget(parent)
+        layout = CollapsibleLayout("Test", expanded=False, parent=parent)
+        parent.show()
+
+        # Verify initial state
+        assert layout._expanded == False
+
+        # Test toggle via button click
+        with qtbot.waitSignal(layout.expand_toggled, timeout=1000):
+            layout.expand_button.click()
+
+        assert layout._expanded == True
+
+        # Test toggle back
+        with qtbot.waitSignal(layout.expand_toggled, timeout=1000):
+            layout.expand_button.click()
+
+        assert layout._expanded == False
+
+    @pytest.fixture(scope='function')
+    def main_object(self, tik, files):
+        """Create a test project for compatibility tests."""
+        project_path = Path(utils.get_home_dir(), "t4_pyside6_compat_test_DO_NOT_USE")
+        if project_path.exists():
+            files.force_remove_directory(project_path)
+        tik.user.set("Admin", "1234")
+        tik.create_project(str(project_path), structure_template="empty")
+        return tik
+
+

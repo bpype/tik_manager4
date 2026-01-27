@@ -7,25 +7,28 @@ from tik_manager4.ui.Qt import QtWidgets, QtCore, QtGui
 class PathBrowser(QtWidgets.QWidget):
     """Customize QLineEdit widget purposed for browsing paths."""
 
-    def __init__(self, name, object_name=None, value=None, disables=None, items=None, **kwargs):
-        super(PathBrowser, self).__init__()
+    def __init__(self, name, object_name=None, value=None, disables=None, items=None, parent=None, **kwargs):
+        super(PathBrowser, self).__init__(parent=parent)
         self.value = value or ""
         self.disables = disables or []
         self.setObjectName(object_name or name)
         self.layout = QtWidgets.QHBoxLayout(self)
+        # self.widget = QtWidgets.QLineEdit(self)
         self.widget = ValidatedString(
             name,
-            object_name,
+            object_name=object_name,
             value=self.value,
             allow_spaces=True,
             allow_directory=True,
             allow_empty=True,
+            parent=self
         )
 
         self.com = self.widget.com
         self.layout.addWidget(self.widget)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.button = TikIconButton(icon_name="folder", circle=False)
+        # self.button = QtWidgets.QPushButton(text="folder", parent=self)
         self.button.clicked.connect(self.browse)
         self.layout.addWidget(self.button)
 
@@ -33,6 +36,7 @@ class PathBrowser(QtWidgets.QWidget):
         if items:
             # if items are defined, make a zort menu button popup.
             self.items_button = TikIconButton(icon_name="menu", circle=False)
+            # self.items_button = QtWidgets.QPushButton(text="menu", parent=self)
             self.layout.addWidget(self.items_button)
             self.items_button.clicked.connect(self.items_pop_menu)
         else:

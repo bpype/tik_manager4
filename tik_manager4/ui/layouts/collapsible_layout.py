@@ -6,7 +6,7 @@ from tik_manager4.ui.widgets.common import (
 )
 
 
-class CollapsibleLayout(QtWidgets.QVBoxLayout):
+class CollapsibleLayout(QtWidgets.QWidget):
     """Header bar widget especially for expandable layouts."""
 
     expand_toggled = QtCore.Signal(bool)
@@ -48,11 +48,12 @@ QPushButton
     def __init__(self, text="", expanded=False, parent=None):
         super().__init__(parent)
 
-        self.setContentsMargins(0, 0, 0, 0)
-        self.setSpacing(0)
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self._main_layout.setContentsMargins(0, 0, 0, 0)
+        self._main_layout.setSpacing(0)
 
-        self.frame = StyleFrame()
-        self.addWidget(self.frame)
+        self.frame = StyleFrame(self)
+        self._main_layout.addWidget(self.frame)
         self.frame.setMaximumHeight(40)
         self.frame.setContentsMargins(0, 0, 0, 0)
         self.frame.setGeometry(QtCore.QRect(220, 160, 291, 81))
@@ -69,19 +70,19 @@ QPushButton
         self.horizontal_layout.setContentsMargins(0, 0, 0, 0)
         self.horizontal_layout.setSpacing(0)
 
-        self.expand_button = TikIconButton(icon_name="arrow_right", size=22)
+        self.expand_button = TikIconButton(icon_name="arrow_right", size=22, parent=self)
         self.horizontal_layout.addWidget(self.expand_button)
 
-        self.label = TikLabel()
+        self.label = TikLabel(parent=self)
         self.label.setText(text)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.horizontal_layout.addWidget(self.label)
 
         self.vertical_layout.addLayout(self.horizontal_layout)
 
-        self.contents_widget = QtWidgets.QWidget()
+        self.contents_widget = QtWidgets.QWidget(self)
         self.contents_layout = QtWidgets.QVBoxLayout()
-        self.addWidget(self.contents_widget)
+        self._main_layout.addWidget(self.contents_widget)
         self.contents_widget.setLayout(self.contents_layout)
         self.contents_widget.setVisible(False)
 
@@ -92,8 +93,13 @@ QPushButton
             self.collapse()
 
         # SIGNALS
-        self.expand_button.clicked.connect(self.toggle)
-        self.frame.clicked.connect(self.toggle)
+        self.expand_button.clicked.connect(self._on_toggle)
+        self.frame.clicked.connect(self._on_toggle)
+
+    @QtCore.Slot()
+    def _on_toggle(self):
+        """Slot for toggle action."""
+        self.toggle()
 
     def toggle(self):
         """Toggle the layout."""
@@ -148,6 +154,6 @@ QPushButton
         border-color: {border_color};
         }}"""
 
-        self.frame._append_style(color_style)
-        self.expand_button._append_style(color_style)
-        self.label._append_style(color_style)
+        self.frame.setStyleSheet(color_style)
+        self.expand_button.setStyleSheet(color_style)
+        self.label.setStyleSheet(color_style)

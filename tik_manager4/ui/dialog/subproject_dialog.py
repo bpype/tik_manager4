@@ -73,28 +73,28 @@ class EditSubprojectDialog(QtWidgets.QDialog):
         scroll_layout.setContentsMargins(0, 0, 0, 0)
 
         # create a collapsible widget for each section
-        self.primary_layout = CollapsibleLayout("Main Properties", expanded=True)
-        scroll_layout.addLayout(self.primary_layout)
-        self.secondary_layout = CollapsibleLayout("Inherited Properties", expanded=True)
+        self.primary_layout = CollapsibleLayout("Main Properties", expanded=True, parent=contents_widget)
+        scroll_layout.addWidget(self.primary_layout)
+        self.secondary_layout = CollapsibleLayout("Inherited Properties", expanded=True, parent=contents_widget)
         # self.secondary_layout.contents_widget.setEnabled(not self.management_lock)
-        scroll_layout.addLayout(self.secondary_layout)
-        self.tertiary_layout = CollapsibleLayout("New Properties", expanded=False)
-        scroll_layout.addLayout(self.tertiary_layout)
+        scroll_layout.addWidget(self.secondary_layout)
+        self.tertiary_layout = CollapsibleLayout("New Properties", expanded=False, parent=contents_widget)
+        scroll_layout.addWidget(self.tertiary_layout)
 
         scroll_layout.addStretch()
 
         self.primary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.primary_definition, self.primary_data, parent=self
         )
-        self.primary_layout.contents_layout.addLayout(self.primary_content)
+        self.primary_layout.contents_layout.addWidget(self.primary_content)
         self.secondary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.secondary_definition, self.secondary_data, parent=self
         )
-        self.secondary_layout.contents_layout.addLayout(self.secondary_content)
+        self.secondary_layout.contents_layout.addWidget(self.secondary_content)
         self.tertiary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.tertiary_definition, self.tertiary_data, parent=self
         )
-        self.tertiary_layout.contents_layout.addLayout(self.tertiary_content)
+        self.tertiary_layout.contents_layout.addWidget(self.tertiary_content)
 
         # create a button box
         self.button_box_layout = QtWidgets.QHBoxLayout()
@@ -249,11 +249,11 @@ class NewSubprojectDialog(EditSubprojectDialog):
         self.secondary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.secondary_definition, self.secondary_data, parent=self
         )
-        self.secondary_layout.contents_layout.addLayout(self.secondary_content)
+        self.secondary_layout.contents_layout.addWidget(self.secondary_content)
         self.tertiary_content = tik_manager4.ui.layouts.settings_layout.SettingsLayout(
             self.tertiary_definition, self.tertiary_data, parent=self
         )
-        self.tertiary_layout.contents_layout.addLayout(self.tertiary_content)
+        self.tertiary_layout.contents_layout.addWidget(self.tertiary_content)
 
     def _get_metadata_override(self, key):
         """Override the function to return always False."""
@@ -310,7 +310,7 @@ class SelectSubprojectDialog(QtWidgets.QDialog):
         self.master_layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(self.master_layout)
 
-        self.subproject_layout = tik_manager4.ui.mcv.subproject_mcv.TikSubProjectLayout(self.tik_project)
+        self.subproject_layout = tik_manager4.ui.mcv.subproject_mcv.TikSubProjectWidget(self.tik_project)
         self.master_layout.addLayout(self.subproject_layout)
         self.button_box = TikButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel

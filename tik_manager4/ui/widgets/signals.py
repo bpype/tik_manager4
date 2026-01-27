@@ -8,8 +8,8 @@ class ValueChangeObj(QtCore.QObject):
 
     valueChanged = QtCore.Signal(object)
 
-    def __init__(self):
-        super(ValueChangeObj, self).__init__()
+    def __init__(self, parent=None):
+        super(ValueChangeObj, self).__init__(parent)
 
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
@@ -20,8 +20,8 @@ class ValueChangeStr(QtCore.QObject):
 
     valueChanged = QtCore.Signal(str)
 
-    def __init__(self):
-        super(ValueChangeStr, self).__init__()
+    def __init__(self, parent=None):
+        super(ValueChangeStr, self).__init__(parent)
 
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
@@ -32,6 +32,9 @@ class ValueChangeInt(QtCore.QObject):
 
     valueChanged = QtCore.Signal(int)
 
+    def __init__(self, parent=None):
+        super(ValueChangeInt, self).__init__(parent)
+
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
 
@@ -40,6 +43,9 @@ class ValueChangeFloat(QtCore.QObject):
     """Simple QObject inheritance to pass the Signal and event to custom widgets"""
 
     valueChanged = QtCore.Signal(float)
+
+    def __init__(self, parent=None):
+        super(ValueChangeFloat, self).__init__(parent)
 
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
@@ -50,6 +56,9 @@ class ValueChangeBool(QtCore.QObject):
 
     valueChanged = QtCore.Signal(bool)
 
+    def __init__(self, parent=None):
+        super(ValueChangeBool, self).__init__(parent)
+
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
 
@@ -58,6 +67,9 @@ class ValueChangeList(QtCore.QObject):
     """Simple QObject inheritance to pass the Signal and event to custom widgets"""
 
     valueChanged = QtCore.Signal(list)
+
+    def __init__(self, parent=None):
+        super(ValueChangeList, self).__init__(parent)
 
     def valueChangeEvent(self, e):
         self.valueChanged.emit(e)
