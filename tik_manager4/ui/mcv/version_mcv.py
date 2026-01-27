@@ -157,7 +157,7 @@ class Buttons:
     reference_btn: TikButton
 
 
-class TikVersionLayout(QtWidgets.QVBoxLayout):
+class TikVersionWidget(QtWidgets.QWidget):
     """Layout for versioning work and publish objects."""
 
     element_view_event = QtCore.Signal(str, str)
@@ -166,20 +166,24 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
 
     def __init__(self, project_object, *args, **kwargs):
         """Initialize the TikVersionLayout."""
-        super().__init__()
+        _parent = kwargs.pop("parent", None)
+        super().__init__(_parent)
         self._purgatory_mode = False
         self.project = project_object
         self.base = None
-        self.parent = kwargs.get("parent")
-        self.feedback = Feedback(parent=self.parent)
+        self._parent = _parent
+        self.feedback = Feedback(parent=self._parent)
         self.app_instance = QtWidgets.QApplication.instance()
+
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self._main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.ingest_mapping = {}  # mapping of ingestor nice name to ingestor name
         self.element_mapping = ({})  # mapping of element type nice name to element type name
 
         self.header = HeaderWidgets(
-            label=QtWidgets.QLabel("Versions"),
-            refresh_btn=TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14)
+            label=QtWidgets.QLabel("Versions", self),
+            refresh_btn=TikIconButton(icon_name="refresh", circle=True, size=18, icon_size=14, parent=self)
         )
 
         self.version = VersionWidgets(
@@ -239,17 +243,17 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         """Setup the UI."""
         header_lay = QtWidgets.QHBoxLayout()
         header_lay.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(header_lay)
+        self._main_layout.addLayout(header_lay)
         self.header.label.setStyleSheet("font-size: 14px; font-weight: bold;")
         header_lay.addWidget(self.header.label)
         header_lay.addStretch()
         header_lay.addWidget(self.header.refresh_btn)
-        self.addWidget(HorizontalSeparator(color=(255, 180, 60)))
+        self._main_layout.addWidget(HorizontalSeparator(color=(255, 180, 60)))
 
         version_layout = QtWidgets.QHBoxLayout()
         version_layout.setContentsMargins(0, 0, 0, 0)
         self.version.border.setLayout(version_layout)
-        self.addWidget(self.version.border)
+        self._main_layout.addWidget(self.version.border)
 
         self.version.border.setObjectName("versionContainer")
         version_layout.addWidget(self.version.sync_btn)
@@ -274,7 +278,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
 
         date_layout = QtWidgets.QHBoxLayout()
         date_layout.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(date_layout)
+        self._main_layout.addLayout(date_layout)
         self.version.last_modified_lbl.setFont(QtGui.QFont("Roboto", 8))
         # make the color grey
         self.version.last_modified_lbl.setStyleSheet("color: grey;")
@@ -283,7 +287,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
 
         user_layout = QtWidgets.QHBoxLayout()
         user_layout.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(user_layout)
+        self._main_layout.addLayout(user_layout)
         self.version.owner_lbl.setFont(QtGui.QFont("Roboto", 10))
         user_layout.addStretch()
         user_layout.addWidget(self.version.owner_lbl)
@@ -292,7 +296,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
 
 
         element_layout = QtWidgets.QVBoxLayout()
-        self.addLayout(element_layout)
+        self._main_layout.addLayout(element_layout)
         self.element.element_lbl.setFont(QtGui.QFont("Roboto", 10))
         element_layout.addWidget(self.element.element_lbl)
         element_hlay = QtWidgets.QHBoxLayout()
@@ -306,7 +310,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         element_layout.addWidget(self.element.ingest_with_combo)
 
         notes_layout = QtWidgets.QVBoxLayout()
-        self.addLayout(notes_layout)
+        self._main_layout.addLayout(notes_layout)
         self.info.notes_lbl.setFont(QtGui.QFont("Roboto", 10))
         notes_layout.addWidget(self.info.notes_lbl)
         notes_layout.addWidget(self.info.notes_editor)
@@ -314,9 +318,12 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         self.info.thumbnail.setToolTip("Right Click for replace options")
         self.info.thumbnail.setMinimumSize(QtCore.QSize(55, 30))
         self.info.thumbnail.setFrameShape(QtWidgets.QFrame.Box)
-        self.info.thumbnail.setScaledContents(True)
         self.info.thumbnail.setAlignment(QtCore.Qt.AlignCenter)
-        self.addWidget(self.info.thumbnail)
+
+        # Set aspect ratio from settings
+        self.info.thumbnail.set_preview_settings(self.project.preview_settings)
+
+        self._main_layout.addWidget(self.info.thumbnail)
 
         btn_layout = QtWidgets.QHBoxLayout()
         self.buttons.bundle_ingest_btn.setVisible(False)
@@ -324,7 +331,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         btn_layout.addWidget(self.buttons.bundle_ingest_btn)
         btn_layout.addWidget(self.buttons.load_btn)
         btn_layout.addWidget(self.buttons.reference_btn)
-        self.addLayout(btn_layout)
+        self._main_layout.addLayout(btn_layout)
         self.buttons.import_btn.setEnabled(False)
         self.buttons.load_btn.setEnabled(False)
         self.buttons.reference_btn.setEnabled(False)
@@ -333,20 +340,20 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         """Connect the signals."""
         self.element.element_combo.currentTextChanged.connect(self.element_type_changed)
         self.version.combo.currentIndexChanged.connect(self.version_changed)
-        self.buttons.import_btn.clicked.connect(self.on_import)
-        self.buttons.load_btn.clicked.connect(self.on_load)
-        self.buttons.reference_btn.clicked.connect(self.on_reference)
-        self.buttons.bundle_ingest_btn.clicked.connect(self.on_bundle_ingest)
+        self.buttons.import_btn.clicked.connect(lambda: self.on_import())
+        self.buttons.load_btn.clicked.connect(lambda: self.on_load())
+        self.buttons.reference_btn.clicked.connect(lambda: self.on_reference())
+        self.buttons.bundle_ingest_btn.clicked.connect(lambda: self.on_bundle_ingest())
         self.version.combo.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.version.combo.customContextMenuRequested.connect(self.version_right_click_menu)
         self.info.thumbnail.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.info.thumbnail.customContextMenuRequested.connect(self.thumbnail_right_click_menu)
-        self.element.element_view_btn.clicked.connect(self.on_element_view_event)
-        self.header.refresh_btn.clicked.connect(self.refresh)
-        self.version.sync_btn.clicked.connect(self.on_sync_to_origin)
+        self.element.element_view_btn.clicked.connect(lambda: self.on_element_view_event())
+        self.header.refresh_btn.clicked.connect(lambda: self.refresh())
+        self.version.sync_btn.clicked.connect(lambda: self.on_sync_to_origin())
         self.info.notes_editor.notes_updated.connect(self.__apply_to_base)
-        self.version.promote_btn.clicked.connect(self.on_promote)
-        self.version.info_btn.clicked.connect(self.on_info)
+        self.version.promote_btn.clicked.connect(lambda: self.on_promote())
+        self.version.info_btn.clicked.connect(lambda: self.on_info())
 
     def on_info(self):
         """Pop-up a dialog with the version information."""
@@ -358,7 +365,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
                      "Creation Date": _version.get_creation_date(),
                      "Last Modified": _version.get_modified_date()
                      })
-        InfoDialog.show_info(data=info_dict, title="Version Details", parent=self.parent)
+        InfoDialog.show_info(data=info_dict, title="Version Details", parent=self._parent)
 
     def on_promote(self):
         """Execute the promote action."""
@@ -607,7 +614,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         publish_version_number = self.get_selected_version_number()
         element_type = self.get_selected_element_type()
 
-        dialog = BundleIngestDialog(self.base, publish_version_number, element_type, parent=self.parent)
+        dialog = BundleIngestDialog(self.base, publish_version_number, element_type, parent=self._parent)
         dialog.show()
 
     def __load_btn_state(self, base, element_type):
@@ -922,16 +929,23 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         # self.populate_versions(self.base.versions)
         self.populate_versions(self.base)
 
+    @QtCore.Slot()
     def refresh(self):
-        """Refresh the version dropdown."""
+        """Refresh the version layout."""
+        self.update_preview_settings()
         if self.base:
             self.base.reload()
-            # self.populate_versions(self.base.versions)
             self.populate_versions(self.base)
         else:
             self.version.combo.clear()
             self.info.notes_editor.clear()
             self.info.thumbnail.clear()
+
+    def update_preview_settings(self):
+        """Update the preview settings."""
+        # Trigger resize to apply new aspect ratio
+        # The widget handles reading the settings itself
+        self.info.thumbnail.adjust_height_to_ratio()
 
     def on_replace_thumbnail(self, mode="view"):
         """Replace the thumbnail with the current view or external file."""
@@ -969,7 +983,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         else:
             # get the project directory
             file_path = QtWidgets.QFileDialog.getOpenFileName(
-                self.parent,
+                self._parent,
                 "Open file",
                 self.project.get_abs_project_path(),
                 "Image files (*.jpg *.png *.gif *.webp)",
@@ -991,7 +1005,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
         _ = position
 
         right_click_menu = QtWidgets.QMenu()
-        right_click_menu.setStyleSheet(self.parent.styleSheet())
+        right_click_menu.setStyleSheet(self._parent.styleSheet())
 
         take_snapshot_action = QtWidgets.QAction(self.tr("Take screen snapshot"), self)
         right_click_menu.addAction(take_snapshot_action)
@@ -1018,7 +1032,7 @@ class TikVersionLayout(QtWidgets.QVBoxLayout):
 
         _ = position  # stop the linter complaining
         right_click_menu = QtWidgets.QMenu()
-        right_click_menu.setStyleSheet(self.parent.styleSheet())  # Add this line
+        right_click_menu.setStyleSheet(self._parent.styleSheet())  # Add this line
 
         # get the current version object from the combo box
 

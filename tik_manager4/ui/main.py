@@ -46,12 +46,12 @@ from tik_manager4.ui.dialog.work_dialog import (
     SaveAnyFileDialog,
     WorkFromTemplateDialog,
 )
-from tik_manager4.ui.mcv.category_mcv import TikCategoryLayout
+from tik_manager4.ui.mcv.category_mcv import TikCategoryWidget
 from tik_manager4.ui.mcv.project_mcv import TikProjectWidget
-from tik_manager4.ui.mcv.subproject_mcv import TikSubProjectLayout
-from tik_manager4.ui.mcv.task_mcv import TikTaskLayout
+from tik_manager4.ui.mcv.subproject_mcv import TikSubProjectWidget
+from tik_manager4.ui.mcv.task_mcv import TikTaskWidget
 from tik_manager4.ui.mcv.user_mcv import TikUserWidget
-from tik_manager4.ui.mcv.version_mcv import TikVersionLayout
+from tik_manager4.ui.mcv.version_mcv import TikVersionWidget
 from tik_manager4.ui.widgets.common import TikButton, VerticalSeparator
 from tik_manager4.ui.widgets.pop import WaitDialog
 
@@ -352,23 +352,23 @@ class MainUI(QtWidgets.QMainWindow):
         self.separator_line = VerticalSeparator()
         self.project_user_layout.addWidget(self.separator_line)
 
-        self.user_mcv = TikUserWidget(self.tik.user)
+        self.user_mcv = TikUserWidget(self.tik.user, parent=self)
         self.project_user_layout.addWidget(self.user_mcv)
 
         # limit the height of the project and user mcv
         self.project_mcv.setMaximumHeight(40)
         self.user_mcv.setMaximumHeight(40)
 
-        self.subprojects_mcv = TikSubProjectLayout(self.tik.project)
-        self.subproject_tree_layout.addLayout(self.subprojects_mcv)
+        self.subprojects_mcv = TikSubProjectWidget(self.tik.project, parent=self)
+        self.subproject_tree_layout.addWidget(self.subprojects_mcv)
 
-        self.tasks_mcv = TikTaskLayout()
+        self.tasks_mcv = TikTaskWidget()
         self.tasks_mcv.task_view.hide_columns(["id", "path"])
-        self.task_tree_layout.addLayout(self.tasks_mcv)
+        self.task_tree_layout.addWidget(self.tasks_mcv)
 
-        self.categories_mcv = TikCategoryLayout()
+        self.categories_mcv = TikCategoryWidget()
         self.categories_mcv.work_tree_view.hide_columns(["id", "path"])
-        self.category_layout.addLayout(self.categories_mcv)
+        self.category_layout.addWidget(self.categories_mcv)
         # if it is houdini, make an exception on the category tab widget
         if self.tik.dcc.name == "Houdini":
             self.categories_mcv.category_tab_widget.setMaximumSize(
@@ -382,9 +382,9 @@ class MainUI(QtWidgets.QMainWindow):
                 "QTabBar::tab { font-size: 10px; spacing: 5px; }"
             )
 
-        self.versions_mcv = TikVersionLayout(self.tik.project, parent=self)
+        self.versions_mcv = TikVersionWidget(self.tik.project, parent=self)
         self.versions_mcv.status_updated.connect(self.status_bar.showMessage)
-        self.version_layout.addLayout(self.versions_mcv)
+        self.version_layout.addWidget(self.versions_mcv)
 
         self.project_mcv.project_set.connect(self.on_set_project)
         self.subprojects_mcv.sub_view.item_selected.connect(
@@ -1107,6 +1107,11 @@ class MainUI(QtWidgets.QMainWindow):
     def refresh_versions(self):
         """Refresh the versions' ui."""
         self.versions_mcv.refresh()
+
+    def refresh(self):
+        """Refresh the entire UI."""
+        self.versions_mcv.update_preview_settings()
+        self.refresh_project()
 
     def on_set_project(self, message=""):
         """Show a status message."""

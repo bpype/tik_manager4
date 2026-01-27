@@ -31,7 +31,7 @@ esbonio==0.16.4
 exceptiongroup==1.1.3
 executing==2.0.1
 fastjsonschema==2.20.0
-filelock==3.15.4
+filelock==3.20.3
 flake8==7.0.0
 html5lib==1.1
 idna==3.7
@@ -58,9 +58,6 @@ mypy==1.8.0
 mypy-extensions==1.0.0
 names==0.3.0
 natsort==8.4.0
-nbclient==0.10.0
-nbconvert==7.16.4
-nbformat==5.10.4
 packaging==23.2
 pandocfilters==1.5.1
 parso==0.8.4
@@ -120,7 +117,7 @@ tomlkit==0.11.1
 tornado==6.5.0
 traitlets==5.14.3
 typing_extensions==4.9.0
-urllib3==2.5.0
+urllib3==2.6.3
 wcwidth==0.2.13
 webencodings==0.5.1
 wrapt==1.14.1

@@ -1,5 +1,11 @@
 # Release Notes
 
+### v4.5.1
+- [TIK-200] Bug fix: Incorrect background color on qss fixed by @herizoran
+- [TIK-204] Preview area improvements by @adevra. Now users can define the thumbnail size and ratio from the settings. A lightbox feature added to preview area to see the thumbnail in full resolution which is activated by pressing spacebar.
+- [TIK-205] Refactoring and fixes for PySide 6.8.3 / Python 3.13.9 compatibility. Tik Manager is ready for Maya 2027.
+- Minor security updates for dependencies.
+
 ## v4.5.0
 - [TIK-191] Snapshots can now be directly published. This is useful when ingesting elements from vendors and client, such as plates, textures, concepts, etc.
 - [TIK-187] New tasks now can be created from the tasks layout in addition to the right-clicking to the parent sub-project.

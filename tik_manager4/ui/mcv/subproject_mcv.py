@@ -730,39 +730,42 @@ class ProxyModel(FilterModel):
         return super(ProxyModel, self).filterAcceptsRow(source_row, source_parent)
 
 
-class TikSubProjectLayout(QtWidgets.QVBoxLayout):
-    def __init__(self, project_obj, recursive_enabled=True, right_click_enabled=True):
-        super(TikSubProjectLayout, self).__init__()
+class TikSubProjectWidget(QtWidgets.QWidget):
+    def __init__(self, project_obj, recursive_enabled=True, right_click_enabled=True, parent=None):
+        super(TikSubProjectWidget, self).__init__(parent)
         self._purgatory_mode = False
+
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self._main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.project_obj = project_obj
         # add a label
         header_lay = QtWidgets.QHBoxLayout()
         header_lay.setContentsMargins(0, 0, 0, 0)
-        self.addLayout(header_lay)
-        self.label = QtWidgets.QLabel("Sub-Projects")
+        self._main_layout.addLayout(header_lay)
+        self.label = QtWidgets.QLabel("Sub-Projects", self)
         self.label.setStyleSheet("font-size: 14px; font-weight: bold;")
         header_lay.addWidget(self.label)
         header_lay.addStretch()
         # add a refresh button
         self.refresh_btn = TikIconButton(
-            icon_name="refresh", circle=True, size=18, icon_size=14
+            icon_name="refresh", circle=True, size=18, icon_size=14, parent=self
         )
         header_lay.addWidget(self.refresh_btn)
-        self.addWidget(HorizontalSeparator(color=(221, 160, 221)))
+        self._main_layout.addWidget(HorizontalSeparator(color=(221, 160, 221)))
 
         # add a checkbox for recursive search
         if recursive_enabled:
-            self.recursive_search_cb = QtWidgets.QCheckBox("Get Tasks Recursively")
+            self.recursive_search_cb = QtWidgets.QCheckBox("Get Tasks Recursively", self)
             self.recursive_search_cb.setChecked(False)
-            self.addWidget(self.recursive_search_cb)
+            self._main_layout.addWidget(self.recursive_search_cb)
         # add a search bar
 
         self.sub_view = TikSubView(project_obj, right_click_enabled=right_click_enabled)
-        self.addWidget(self.sub_view)
+        self._main_layout.addWidget(self.sub_view)
 
         self.filter_widget = FilterWidget(self.sub_view.proxy_model)
-        self.addWidget(self.filter_widget)
+        self._main_layout.addWidget(self.filter_widget)
 
         if recursive_enabled:
             self.sub_view.set_recursive_task_scan(self.recursive_search_cb.isChecked())
@@ -774,7 +777,7 @@ class TikSubProjectLayout(QtWidgets.QVBoxLayout):
         for idx in range(1, self.sub_view.header().count()):
             self.sub_view.hideColumn(idx)
 
-        self.refresh_btn.clicked.connect(self.manual_refresh)
+        self.refresh_btn.clicked.connect(lambda: self.manual_refresh())
 
         self.purgatory_mode = self._purgatory_mode
 
@@ -791,9 +794,9 @@ class TikSubProjectLayout(QtWidgets.QVBoxLayout):
         self.sub_view.purgatory_mode = value
         self.sub_view.model.purgatory_mode = value
         self.refresh()
-        # self.manual_refresh()
-        # self.sub_view.get_tasks()
 
+
+    @QtCore.Slot()
     def manual_refresh(self):
         """Refresh the layout and the view"""
         self.project_obj.structure.reload()

@@ -10,16 +10,17 @@ class ValidatedString(String):
 
     def __init__(
         self,
-        *args,
+        name,
         connected_widgets=None,
         allow_spaces=False,
         allow_directory=False,
         allow_empty=False,
         allow_special_characters=False,
+        parent=None,
         **kwargs
     ):
         """Custom QLineEdit widget to validate entered values"""
-        super(ValidatedString, self).__init__(*args, **kwargs)
+        super().__init__(name, parent=parent, **kwargs)
         self.allow_spaces = allow_spaces
         self.allow_directory = allow_directory
         self.allow_empty = allow_empty
